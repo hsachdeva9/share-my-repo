@@ -16,13 +16,15 @@ class FileProcessor:
             '.exe', '.dll', '.so', '.dylib',                  # Executables
             '.zip', '.tar', '.gz', '.rar', '.7z',            # Archives
             '.mp3', '.mp4', '.avi', '.mov',                   # Media
-            '.pyc', '.pyo', '.class'                          # Compiled code
+            '.pyc', '.pyo', '.class', '.egg'                  # Compiled code (fixed: removed 'egg')
         }
         
-        # Directories to always skip
+        # Directories to always skip - UPDATED to include .egg-info patterns
         self.skip_directories = {
             '.git', '__pycache__', 'node_modules', '.venv', 'venv',
-            '.env', 'env', 'build', 'dist', '.pytest_cache', '.egg-info'
+            '.env', 'env', 'build', 'dist', '.pytest_cache', 
+            # Added more comprehensive egg-info patterns
+            '.egg-info'  # This will catch any directory ending with .egg-info
         }
     
     def load_gitignore_patterns(self, root_path: Path) -> Set[str]:
@@ -69,10 +71,41 @@ class FileProcessor:
         
         return False
     
+    def should_skip_directory(self, dir_path: Path, root_path: Path) -> bool:
+        """Check if a directory should be skipped entirely."""
+        dir_name = dir_path.name
+        
+        # Skip directories in our skip list
+        if dir_name in self.skip_directories:
+            return True
+            
+        # Skip directories ending with .egg-info (like share_my_repo.egg-info)
+        if dir_name.endswith('.egg-info'):
+            return True
+            
+        # Skip any directory containing .egg-info in the path
+        try:
+            relative_path = dir_path.relative_to(root_path)
+            for part in relative_path.parts:
+                if part.endswith('.egg-info') or part in self.skip_directories:
+                    return True
+        except ValueError:
+            pass
+            
+        return False
+    
     def is_text_file(self, file_path: Path) -> bool:
         """Determine if a file is likely a text file we can read."""
         # Skip files with binary extensions
         if file_path.suffix.lower() in self.binary_extensions:
+            return False
+        
+        # Skip .egg files specifically
+        if file_path.suffix.lower() == '.egg' or file_path.name.endswith('.egg'):
+            return False
+            
+        # Skip files inside .egg-info directories
+        if '.egg-info' in str(file_path):
             return False
         
         # Skip very large files
@@ -135,44 +168,44 @@ class FileProcessor:
             return error_msg, False
     
     def discover_files(self, root_path: Path, 
-                      include_patterns: Optional[List[str]] = None,
-                      exclude_patterns: Optional[List[str]] = None,
-                      use_gitignore: bool = True) -> List[Path]:
+                   include_patterns: Optional[List[str]] = None,
+                   exclude_patterns: Optional[List[str]] = None,
+                   use_gitignore: bool = True) -> List[Path]:
         """Find all files in directory tree that match our criteria."""
         files = []
-        
+
         # Load gitignore patterns if requested
         gitignore_patterns = self.load_gitignore_patterns(root_path) if use_gitignore else None
-        
-        
+
         try:
             for root, dirs, filenames in os.walk(root_path):
-                # Skip directories we don't want to traverse
-                dirs[:] = [d for d in dirs if d not in self.skip_directories]
-                
                 root_path_obj = Path(root)
-                
+
+                # IMPROVED: Filter out directories we should skip BEFORE processing
+                dirs[:] = [d for d in dirs if not self.should_skip_directory(root_path_obj / d, root_path)]
+
+                # Skip processing files in this directory if it should be skipped
+                if self.should_skip_directory(root_path_obj, root_path):
+                    continue
+
                 for filename in filenames:
                     file_path = root_path_obj / filename
-                    
+
                     # Check if it's a text file we can process
                     if not self.is_text_file(file_path):
                         continue
 
-                    if ".egg-info" in file_path.parts:
-                        return False
-                     
                     # Check include/exclude patterns
                     if not self.should_include_file(file_path, root_path, 
-                                                  include_patterns, exclude_patterns, 
-                                                  gitignore_patterns):
+                                                    include_patterns, exclude_patterns, 
+                                                    gitignore_patterns):
                         continue
-                    
+
                     files.append(file_path)
-                    
+
         except PermissionError as e:
             print(f"Permission denied accessing {root_path}: {e}", file=sys.stderr)
         except Exception as e:
             print(f"Error discovering files in {root_path}: {e}", file=sys.stderr)
-        
+
         return sorted(files)
