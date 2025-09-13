@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 from main import process_repositories
 
-@click.command()
+@click.command(context_settings={'help_option_names': ['-h', '--help']})
 @click.argument('paths', nargs=-1, type=click.Path(exists=True))
 @click.option('-o', '--output', help='Output file path')
 @click.option('-v', '--version', is_flag=True, help='Show version')
