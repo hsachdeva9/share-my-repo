@@ -15,7 +15,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "share-my-repo = cli:main",  
+            "share-my-repo = src.cli:main",  
         ],
     },
 )
