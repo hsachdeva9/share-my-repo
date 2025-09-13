@@ -1,11 +1,13 @@
 import os
 import fnmatch
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 import sys
 
 class FileProcessor:
-    def __init__(self, max_file_size: int = 16*1024):  # 16KB default
+    """Handles file discovery, filtering, and content reading."""
+    
+    def __init__(self, max_file_size: int = 16 * 1024):
         self.max_file_size = max_file_size
         # Common binary file extensions to skip
         self.binary_extensions = {
@@ -20,13 +22,55 @@ class FileProcessor:
         # Directories to always skip
         self.skip_directories = {
             '.git', '__pycache__', 'node_modules', '.venv', 'venv',
-            '.env', 'env', 'build', 'dist', '.pytest_cache'
+            '.env', 'env', 'build', 'dist', '.pytest_cache', '.egg-info'
         }
     
+    def load_gitignore_patterns(self, root_path: Path) -> Set[str]:
+        """Load patterns from .gitignore file if it exists."""
+        gitignore_path = root_path / '.gitignore'
+        patterns = set()
+        
+        if gitignore_path.exists():
+            try:
+                with open(gitignore_path, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Skip empty lines and comments
+                        if line and not line.startswith('#'):
+                            patterns.add(line)
+            except Exception as e:
+                print(f"Warning: Could not read .gitignore: {e}", file=sys.stderr)
+        
+        return patterns
+    
+    def matches_pattern(self, path: Path, patterns: List[str], root_path: Path) -> bool:
+        """Check if path matches any of the given patterns."""
+        if not patterns:
+            return False
+        
+        try:
+            relative_path = path.relative_to(root_path)
+            path_str = str(relative_path)
+            filename = path.name
+            
+            for pattern in patterns:
+                # Check filename match
+                if fnmatch.fnmatch(filename, pattern):
+                    return True
+                # Check full path match
+                if fnmatch.fnmatch(path_str, pattern):
+                    return True
+                # Check directory match
+                if pattern.endswith('/') and pattern[:-1] in relative_path.parts:
+                    return True
+        except ValueError:
+            # Path is not relative to root_path
+            pass
+        
+        return False
+    
     def is_text_file(self, file_path: Path) -> bool:
-        """
-        Determine if a file is likely a text file we can read.
-        """
+        """Determine if a file is likely a text file we can read."""
         # Skip files with binary extensions
         if file_path.suffix.lower() in self.binary_extensions:
             return False
@@ -50,29 +94,28 @@ class FileProcessor:
         
         return True
     
-    def should_include_file(self, file_path: Path, 
-                          include_patterns: Optional[List[str]] = None) -> bool:
-        """
-        Determine if file should be included based on include patterns.
-        """
-        filename = file_path.name
+    def should_include_file(self, file_path: Path, root_path: Path,
+                          include_patterns: Optional[List[str]] = None,
+                          exclude_patterns: Optional[List[str]] = None,
+                          gitignore_patterns: Optional[Set[str]] = None) -> bool:
+        """Determine if file should be included based on patterns."""
         
-        # If include patterns are specified, file must match at least one
+        # Check gitignore patterns first
+        if gitignore_patterns and self.matches_pattern(file_path, list(gitignore_patterns), root_path):
+            return False
+        
+        # Check exclude patterns
+        if exclude_patterns and self.matches_pattern(file_path, exclude_patterns, root_path):
+            return False
+        
+        # Check include patterns
         if include_patterns:
-            for pattern in include_patterns:
-                if fnmatch.fnmatch(filename, pattern):
-                    return True
-            return False  # No include pattern matched
+            return self.matches_pattern(file_path, include_patterns, root_path)
         
-        return True  # No patterns specified, include everything
+        return True
     
     def read_file_content(self, file_path: Path) -> Tuple[str, bool]:
-        """
-        Read file content, handling large files and encoding issues.
-        
-        Returns:
-            Tuple of (content, was_truncated)
-        """
+        """Read file content, handling large files and encoding issues."""
         try:
             file_size = file_path.stat().st_size
             
@@ -92,11 +135,15 @@ class FileProcessor:
             return error_msg, False
     
     def discover_files(self, root_path: Path, 
-                      include_patterns: Optional[List[str]] = None) -> List[Path]:
-        """
-        Find all files in directory tree that match our criteria.
-        """
+                      include_patterns: Optional[List[str]] = None,
+                      exclude_patterns: Optional[List[str]] = None,
+                      use_gitignore: bool = True) -> List[Path]:
+        """Find all files in directory tree that match our criteria."""
         files = []
+        
+        # Load gitignore patterns if requested
+        gitignore_patterns = self.load_gitignore_patterns(root_path) if use_gitignore else None
+        
         
         try:
             for root, dirs, filenames in os.walk(root_path):
@@ -111,9 +158,14 @@ class FileProcessor:
                     # Check if it's a text file we can process
                     if not self.is_text_file(file_path):
                         continue
-                    
-                    # Check include patterns
-                    if not self.should_include_file(file_path, include_patterns):
+
+                    if ".egg-info" in file_path.parts:
+                        return False
+                     
+                    # Check include/exclude patterns
+                    if not self.should_include_file(file_path, root_path, 
+                                                  include_patterns, exclude_patterns, 
+                                                  gitignore_patterns):
                         continue
                     
                     files.append(file_path)
