@@ -27,7 +27,6 @@ class OutputFormatter:
                         current_dict[part] = {}
                     current_dict = current_dict[part]
                 
-                # Add the filename
                 current_dict[parts[-1]] = None
                 
             except ValueError:

@@ -24,7 +24,6 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
     if not paths:
         paths = ['.']
     
-    # No need for another import - we already imported at the top
     try:
         process_repositories(
             paths=list(paths),

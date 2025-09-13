@@ -22,9 +22,7 @@ class FileProcessor:
         # Directories to always skip - UPDATED to include .egg-info patterns
         self.skip_directories = {
             '.git', '__pycache__', 'node_modules', '.venv', 'venv',
-            '.env', 'env', 'build', 'dist', '.pytest_cache', 
-            # Added more comprehensive egg-info patterns
-            '.egg-info'  # This will catch any directory ending with .egg-info
+            '.env', 'env', 'build', 'dist', '.pytest_cache', '.egg-info'  
         }
     
     def load_gitignore_patterns(self, root_path: Path) -> Set[str]:
