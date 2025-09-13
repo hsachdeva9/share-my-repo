@@ -1,7 +1,7 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict
 
 class GitInfo:
     """Handles git repository operations."""

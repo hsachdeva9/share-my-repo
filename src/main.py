@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-from file_processor import FileProcessor
-from git_info import GitInfo
-from formatter import OutputFormatter
+from src.file_processor import FileProcessor
+from src.git_info import GitInfo
+from src.formatter import OutputFormatter
 
 def process_repositories(paths: List[str], 
                         output_file: Optional[str] = None,
