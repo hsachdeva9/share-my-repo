@@ -1,7 +1,7 @@
 import click
 import sys
 from pathlib import Path
-from main import process_repositories
+from src.main import process_repositories
 
 @click.command(context_settings={'help_option_names': ['-h', '--help']})
 @click.argument('paths', nargs=-1, type=click.Path(exists=True))
@@ -10,7 +10,7 @@ from main import process_repositories
 @click.option('--include', help='Include files matching pattern (e.g., "*.js,*.py")')
 @click.option('--exclude', help='Exclude files matching pattern (e.g., "*.log,node_modules")')
 @click.option('--max-file-size', type=int, default=16384, help='Maximum file size in bytes (default: 16384)')
-@click.option('--format', 'output_format', type=click.Choice(['markdown', 'json', 'yaml']), 
+@click.option('--format', 'output_format', type=click.Choice(['markdown', 'json', 'yaml']),
               default='markdown', help='Output format')
 @click.option('--tokens', is_flag=True, help='Show estimated token count')
 def main(paths, output, version, include, exclude, max_file_size, output_format, tokens):
@@ -24,9 +24,7 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
     if not paths:
         paths = ['.']
     
-    # Import here to avoid circular imports
-    from main import process_repositories
-    
+    # No need for another import - we already imported at the top
     try:
         process_repositories(
             paths=list(paths),
