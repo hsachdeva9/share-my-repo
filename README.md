@@ -11,8 +11,8 @@
 ## Features
 
 - Recursively discover and process files in a repository.
+- Generates a clear, easy-to-read directory tree showing the organization of all included files.
 - Filter files based on include/exclude patterns.
-- Respect `.gitignore` rules when discovering files.
 - Automatically skip binary files and large files.
 - Retrieve Git information (commit, branch, author, date) if the directory is a Git repository.
 - Generate Markdown, JSON, or YAML output.
@@ -28,16 +28,30 @@ Make sure you have **Python 3.7+** installed.
 
 1. Clone the repository:
 
+### For End Users
+Clone and install the package:
+
 ```bash
+# clone the repository 
 git clone https://github.com/yourusername/share-my-repo.git
 cd share-my-repo
-```
 
-2. Install the package and dependencies:
-
-```bash
+# install dependencies
 pip install .
 ```
+## For Development / Contributors
+
+Install in editable mode to make code changes without reinstalling:
+
+```bash
+# clone the repository 
+git clone https://github.com/yourusername/share-my-repo.git
+cd share-my-repo
+
+# install dependencies
+pip install -e .
+```
+
 Dependencies:
 
 - gitpython>=3.1.0
@@ -59,6 +73,7 @@ share-my-repo [OPTIONS] [PATHS...]
 |--------|-------------|
 | `-o, --output <file>` | Path to save the output file. If omitted, output is printed to console. |
 | `-v, --version` | Show the version of the tool. |
+| `-h, --help` | Show help message and exit. |
 | `--include` | Include files matching a pattern (e.g., `"*.py,*.js"`). |
 | `--exclude` | Exclude files matching a pattern (e.g., `"*.log,venv"`). |
 | `--max-file-size` | Maximum file size in bytes (default: `16384`). Larger files are truncated. |
@@ -89,16 +104,25 @@ share-my-repo . --include "*.py,*.js"
 ```bash
 share-my-repo . --format json --output repo.json
 ```
+---
 
-# Repository Context
 
 ## Structure
+
+```bash
+share-my-repo/
 ├── README.md
 ├── setup.py
-└── src
-├── cli.py
-├── file_processor.py
-└── ...
+├── LICENSE
+├── .gitignore
+└── src/
+    ├── cli.py
+    ├── file_processor.py
+    ├── formatter.py
+    ├── git_info.py
+    ├── main.py
+    └── __init__.py
+```
 
 ## Contributing
 
