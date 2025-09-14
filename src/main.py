@@ -28,35 +28,78 @@ def process_repositories(paths: List[str],
     for path_str in paths:
         path = Path(path_str).resolve()
         
-        if path.is_file():
-            repo_info = process_single_file(path, file_processor)
-        elif path.is_dir():
-            repo_info = process_directory(path, file_processor, formatter, 
-                                        include_patterns, exclude_patterns)
-        else:
-            print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
+        try:
+            if path.is_file():
+                repo_info = process_single_file(path, file_processor)
+            elif path.is_dir():
+                repo_info = process_directory(path, file_processor, formatter, 
+                                            include_patterns, exclude_patterns)
+            else:
+                print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
+                continue
+            
+            all_results.append(repo_info)
+            
+        except Exception as e:
+            print(f"Error processing {path}: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
             continue
-        
-        all_results.append(repo_info)
+    
+    if not all_results:
+        print("No results to output", file=sys.stderr)
+        return
     
     # Handle output
-    if len(all_results) == 1:
-        final_output = formatter.format_output(all_results[0], output_format, show_tokens)
-    else:
-        combined_info = combine_repositories(all_results)
-        final_output = formatter.format_output(combined_info, output_format, show_tokens)
-    
-    # Output results
-    if output_file:
-        try:
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(final_output)
-            print(f"Output written to {output_file}", file=sys.stderr)
-        except Exception as e:
-            print(f"Error writing to {output_file}: {e}", file=sys.stderr)
-            sys.exit(1)
-    else:
-        print(final_output)
+    try:
+        if len(all_results) == 1:
+            final_output = formatter.format_output(all_results[0], output_format, show_tokens)
+        else:
+            combined_info = combine_repositories(all_results)
+            final_output = formatter.format_output(combined_info, output_format, show_tokens)
+        
+        # Output results
+        if output_file:
+            try:
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(final_output)
+                print(f"Output written to {output_file}", file=sys.stderr)
+            except Exception as e:
+                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            # Handle large console output properly
+            try:
+                # For very large output, write in chunks to avoid buffer issues
+                if len(final_output) > 50000:  # If output is larger than ~50KB
+                    chunk_size = 8192  # 8KB chunks
+                    for i in range(0, len(final_output), chunk_size):
+                        chunk = final_output[i:i + chunk_size]
+                        sys.stdout.write(chunk)
+                        sys.stdout.flush()
+                else:
+                    # For smaller output, use regular write
+                    sys.stdout.write(final_output)
+                    sys.stdout.flush()
+                
+                # Add a final newline if the output doesn't end with one
+                if not final_output.endswith('\n'):
+                    sys.stdout.write('\n')
+                    sys.stdout.flush()
+                    
+            except BrokenPipeError:
+                # Handle cases where output is piped and the pipe is closed
+                pass
+            except Exception as e:
+                print(f"Error writing to console: {e}", file=sys.stderr)
+                # Fallback to regular print
+                print(final_output)
+                
+    except Exception as e:
+        print(f"Error formatting output: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 def process_directory(path: Path, 
                      file_processor: FileProcessor, 
@@ -65,21 +108,21 @@ def process_directory(path: Path,
                      exclude_patterns: Optional[List[str]] = None) -> Dict[str, Any]:
     """Process a directory with enhanced filtering."""
     
-    print(f"Processing directory: {path}", file=sys.stderr)
-    
     # Get git information
     git_info = GitInfo(path)
     
     # Discover files with enhanced filtering
-    print("Discovering files...", file=sys.stderr)
-    files = file_processor.discover_files(path, include_patterns, exclude_patterns)
-    print(f"Found {len(files)} files to process", file=sys.stderr)
+    try:
+        files = file_processor.discover_files(path, include_patterns, exclude_patterns)
+    except Exception as e:
+        print(f"Error discovering files: {e}", file=sys.stderr)
+        files = []
     
     # Process each file
     file_contents = []
     total_lines = 0
     
-    for file_path in files:
+    for i, file_path in enumerate(files, 1):
         try:
             content, truncated = file_processor.read_file_content(file_path)
             relative_path = file_path.relative_to(path)
@@ -101,7 +144,11 @@ def process_directory(path: Path,
             print(f"Warning: Error processing {file_path}: {e}", file=sys.stderr)
     
     # Generate tree structure
-    tree_structure = formatter.generate_tree_structure(files, path)
+    try:
+        tree_structure = formatter.generate_tree_structure(files, path)
+    except Exception as e:
+        print(f"Error generating tree structure: {e}", file=sys.stderr)
+        tree_structure = "Error generating tree structure"
     
     # Summary statistics
     summary = {
@@ -119,8 +166,6 @@ def process_directory(path: Path,
 
 def process_single_file(file_path: Path, file_processor: FileProcessor) -> Dict[str, Any]:
     """Process a single file."""
-    
-    print(f"Processing file: {file_path}", file=sys.stderr)
     
     git_info = GitInfo(file_path.parent)
     
@@ -150,7 +195,9 @@ def process_single_file(file_path: Path, file_processor: FileProcessor) -> Dict[
         }
         
     except Exception as e:
-        print(f"Error: Error processing {file_path}: {e}", file=sys.stderr)
+        print(f"Error processing {file_path}: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
         return {
             'absolute_path': str(file_path.parent),
             'git_info': None,

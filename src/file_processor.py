@@ -179,13 +179,14 @@ class FileProcessor:
             for root, dirs, filenames in os.walk(root_path):
                 root_path_obj = Path(root)
 
-                # IMPROVED: Filter out directories we should skip BEFORE processing
+                
                 dirs[:] = [d for d in dirs if not self.should_skip_directory(root_path_obj / d, root_path)]
 
-                # Skip processing files in this directory if it should be skipped
-                if self.should_skip_directory(root_path_obj, root_path):
-                    continue
+                dirs[:] = [d for d in dirs if not self.should_skip_directory(root_path_obj / d, root_path)]
 
+                
+                if root_path_obj != root_path and self.should_skip_directory(root_path_obj, root_path):
+                    continue
                 for filename in filenames:
                     file_path = root_path_obj / filename
 
