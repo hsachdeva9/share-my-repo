@@ -16,10 +16,10 @@ class FileProcessor:
             '.exe', '.dll', '.so', '.dylib',                  # Executables
             '.zip', '.tar', '.gz', '.rar', '.7z',            # Archives
             '.mp3', '.mp4', '.avi', '.mov',                   # Media
-            '.pyc', '.pyo', '.class', '.egg'                  # Compiled code (fixed: removed 'egg')
+            '.pyc', '.pyo', '.class', '.egg'                  # Compiled code
         }
         
-        # Directories to always skip - UPDATED to include .egg-info patterns
+        # Directories to always skip
         self.skip_directories = {
             '.git', '__pycache__', 'node_modules', '.venv', 'venv',
             '.env', 'env', 'build', 'dist', '.pytest_cache', '.egg-info'  
@@ -50,19 +50,50 @@ class FileProcessor:
         
         try:
             relative_path = path.relative_to(root_path)
-            path_str = str(relative_path)
+            # Convert to forward slashes for consistent pattern matching
+            path_str = str(relative_path).replace("\\", "/")
             filename = path.name
             
             for pattern in patterns:
-                # Check filename match
+                pattern = pattern.strip()
+                if not pattern:
+                    continue
+                
+                # 1. Direct filename match (e.g., "*.py" matches "file.py")
                 if fnmatch.fnmatch(filename, pattern):
                     return True
-                # Check full path match
+                
+                # 2. Full path match (e.g., "src/*.py" matches "src/file.py")
                 if fnmatch.fnmatch(path_str, pattern):
                     return True
-                # Check directory match
-                if pattern.endswith('/') and pattern[:-1] in relative_path.parts:
-                    return True
+                
+                # 3. Glob pattern match using pathlib (handles ** patterns)
+                try:
+                    if relative_path.match(pattern):
+                        return True
+                except ValueError:
+                    # Invalid pattern, skip
+                    pass
+                
+                # 4. Check if pattern matches any part of the path
+                # This handles cases like "*.py" should match "src/file.py"
+                if not '/' in pattern and not '\\' in pattern:
+                    # Simple glob pattern, check against filename
+                    if fnmatch.fnmatch(filename, pattern):
+                        return True
+                
+                # 5. Directory matching for patterns ending with /
+                if pattern.endswith('/'):
+                    dir_pattern = pattern[:-1]
+                    if any(fnmatch.fnmatch(part, dir_pattern) for part in relative_path.parts[:-1]):
+                        return True
+                
+                # 6. Handle glob patterns that should match anywhere in the path
+                # For example, "*.py" should match files in any subdirectory
+                if '*' in pattern and '/' not in pattern:
+                    if fnmatch.fnmatch(filename, pattern):
+                        return True
+        
         except ValueError:
             # Path is not relative to root_path
             pass
@@ -81,12 +112,15 @@ class FileProcessor:
         if dir_name.endswith('.egg-info'):
             return True
             
-        # Skip any directory containing .egg-info in the path
+        # Skip any directory that IS a .egg-info directory (not just contains it)
         try:
             relative_path = dir_path.relative_to(root_path)
-            for part in relative_path.parts:
-                if part.endswith('.egg-info') or part in self.skip_directories:
-                    return True
+            # Check if this specific directory is a .egg-info directory
+            if any(part.endswith('.egg-info') for part in relative_path.parts):
+                return True
+            # Check if this specific directory is in skip list
+            if any(part in self.skip_directories for part in relative_path.parts):
+                return True
         except ValueError:
             pass
             
@@ -166,9 +200,9 @@ class FileProcessor:
             return error_msg, False
     
     def discover_files(self, root_path: Path, 
-                   include_patterns: Optional[List[str]] = None,
-                   exclude_patterns: Optional[List[str]] = None,
-                   use_gitignore: bool = True) -> List[Path]:
+               include_patterns: Optional[List[str]] = None,
+               exclude_patterns: Optional[List[str]] = None,
+               use_gitignore: bool = True) -> List[Path]:
         """Find all files in directory tree that match our criteria."""
         files = []
 
@@ -179,14 +213,9 @@ class FileProcessor:
             for root, dirs, filenames in os.walk(root_path):
                 root_path_obj = Path(root)
 
-                
+                # Filter directories to skip (modify dirs in-place)
                 dirs[:] = [d for d in dirs if not self.should_skip_directory(root_path_obj / d, root_path)]
 
-                dirs[:] = [d for d in dirs if not self.should_skip_directory(root_path_obj / d, root_path)]
-
-                
-                if root_path_obj != root_path and self.should_skip_directory(root_path_obj, root_path):
-                    continue
                 for filename in filenames:
                     file_path = root_path_obj / filename
 

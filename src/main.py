@@ -5,6 +5,8 @@ from src.file_processor import FileProcessor
 from src.git_info import GitInfo
 from src.formatter import OutputFormatter
 
+VALID_FORMATS = ['markdown', 'json', 'yaml']
+
 def process_repositories(paths: List[str], 
                         output_file: Optional[str] = None,
                         include: Optional[str] = None,
@@ -14,6 +16,12 @@ def process_repositories(paths: List[str],
                         show_tokens: bool = False):
     """Main processing function with enhanced features."""
     
+    VALID_FORMATS = ['markdown', 'json', 'yaml']
+    if output_format not in VALID_FORMATS:
+        raise ValueError(
+            f"Invalid output format '{output_format}'. Must be one of: {', '.join(VALID_FORMATS)}"
+        )
+
     # Parse include/exclude patterns from comma-separated strings
     include_patterns = [p.strip() for p in include.split(',')] if include else None
     exclude_patterns = [p.strip() for p in exclude.split(',')] if exclude else None

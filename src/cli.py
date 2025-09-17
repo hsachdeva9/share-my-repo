@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from src.main import process_repositories
 
+
 @click.command(context_settings={'help_option_names': ['-h', '--help']})
 @click.argument('paths', nargs=-1, type=click.Path(exists=True))
 @click.option('-o', '--output', help='Output file path')
@@ -15,15 +16,15 @@ from src.main import process_repositories
 @click.option('--tokens', is_flag=True, help='Show estimated token count')
 def main(paths, output, version, include, exclude, max_file_size, output_format, tokens):
     """Repository Context Packager - Convert repos to LLM-friendly format"""
-    
+
     if version:
         click.echo("share-my-repo v0.1.0")
         return
-    
+
     # If no paths provided, use current directory
     if not paths:
         paths = ['.']
-    
+
     try:
         process_repositories(
             paths=list(paths),
@@ -37,6 +38,7 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
+
 
 if __name__ == '__main__':
     main()
