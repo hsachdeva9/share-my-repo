@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
 from typing import List, Optional, Dict, Any
-from src.file_processor import FileProcessor
-from src.git_info import GitInfo
-from src.formatter import OutputFormatter
+from file_processor import FileProcessor
+from git_info import GitInfo
+from formatter import OutputFormatter
 
 VALID_FORMATS = ['markdown', 'json', 'yaml']
 

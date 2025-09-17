@@ -6,8 +6,14 @@ setup(
     author="Hitesh Sachdeva",
     author_email="yhsachdeva9@myseneca.ca",
     description="CLI tool to package git repositories for sharing with LLMs",
-    packages=find_packages(where="src"),  # look inside src folder
-    package_dir={"": "src"},  # tells Python src is root for packages
+    package_dir={"": "src"},  
+    py_modules=[
+        "cli",
+        "main",
+        "file_processor",
+        "formatter",
+        "git_info",
+    ],
     python_requires=">=3.7",
     install_requires=[
         "gitpython>=3.1.0",
@@ -15,7 +21,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "share-my-repo = src.cli:main",  
-        ],
-    },
-)
+            "share-my-repo = cli:main"
+            ],
+        },
+            
+    )

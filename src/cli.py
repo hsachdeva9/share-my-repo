@@ -1,7 +1,7 @@
 import click
 import sys
 from pathlib import Path
-from src.main import process_repositories
+from main import process_repositories
 
 
 @click.command(context_settings={'help_option_names': ['-h', '--help']})
