@@ -1,4 +1,4 @@
-import os
+import os, time    ## Adding time to handle the recent option to include only files modified in the last 7 days
 import fnmatch
 from pathlib import Path
 from typing import List, Optional, Tuple, Set
@@ -237,3 +237,17 @@ class FileProcessor:
             print(f"Error discovering files in {root_path}: {e}", file=sys.stderr)
 
         return sorted(files)
+    
+    def is_recent_file(self, file_path: Path, days: int = 7) -> bool:
+        """Check if a file was modified in the last `days` days."""
+        try:
+            last_modified = file_path.stat().st_mtime
+            return (time.time() - last_modified) <= (days * 86400)
+        except (OSError, FileNotFoundError):
+            return False
+    
+    def filter_recent_files(self, files: List[Path], days: int = 7) -> List[Path]:
+        """Filter files to include only those modified in the last `days` days."""
+        return [f for f in files if self.is_recent_file(f, days)]
+
+

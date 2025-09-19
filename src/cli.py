@@ -14,7 +14,13 @@ from main import process_repositories
 @click.option('--format', 'output_format', type=click.Choice(['markdown', 'json', 'yaml']),
               default='markdown', help='Output format')
 @click.option('--tokens', is_flag=True, help='Show estimated token count')
-def main(paths, output, version, include, exclude, max_file_size, output_format, tokens):
+@click.option(
+    "-r", "--recent",
+    is_flag=True,
+    help="Include only files modified in the last 7 days"
+)
+
+def main(paths, output, version, include, exclude, max_file_size, output_format, tokens, recent):
     """Repository Context Packager - Convert repos to LLM-friendly format"""
 
     if version:
@@ -33,7 +39,8 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
             exclude=exclude,
             max_file_size=max_file_size,
             output_format=output_format,
-            show_tokens=tokens
+            show_tokens=tokens,
+            recent=recent
         )
     except Exception as e:
         click.echo(f"Error: {e}", err=True)

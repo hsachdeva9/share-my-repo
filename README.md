@@ -10,15 +10,28 @@
 
 ## Features
 
-- Recursively discover and process files in a repository.
-- Generates a clear, easy-to-read directory tree showing the organization of all included files.
-- Filter files based on include/exclude patterns.
-- Automatically skip binary files and large files.
-- Retrieve Git information (commit, branch, author, date) if the directory is a Git repository.
-- Generate Markdown, JSON, or YAML output.
-- Estimate token count for LLM input.
-- Handle single files or multiple repositories at once.
-- Optional truncation of large files to avoid overwhelming output.
+### **File Discovery & Processing**
+- **Recursive file discovery** - Automatically finds and processes all files in a repository
+- **Smart file filtering** - Skip binary files, large files, and unwanted directories
+- **Multiple repository support** - Handle single files or multiple repositories at once
+
+### **Directory Structure**
+- **Visual tree representation** - Generates clear, easy-to-read directory trees
+- **Organized file listing** - Shows the complete organization of all included files
+
+### **Advanced Filtering**
+- **Pattern-based filtering** - Include/exclude files using glob patterns (`*.py`, `*.js`, etc.)
+- **Recent changes filter** - Show only files modified in the last 7 days with `--recent` flag
+- **File size limits** - Optional truncation of large files to avoid overwhelming output
+
+### **Git Integration**
+- **Repository metadata** - Retrieve commit hash, branch, author, and date information
+- **Git-aware processing** - Automatically detects and processes Git repositories
+
+### **Output Formats & Analysis**
+- **Multiple output formats** - Generate Markdown, JSON, or YAML output
+- **Token estimation** - Estimate token count for LLM input optimization
+- **Summary statistics** - File counts, line counts, and other useful metrics
 
 ---
 
@@ -79,6 +92,7 @@ share-my-repo [OPTIONS] [PATHS...]
 | `--max-file-size` | Maximum file size in bytes (default: `16384`). Larger files are truncated. |
 | `--format` | Output format: `markdown` (default), `json`, `yaml`. |
 | `--tokens` | Show estimated token count for LLM input. |
+| `-r, --recent` | Include only files modified in the last 7 days. Shows modification dates in output. |
 
 ## Examples
 
@@ -104,6 +118,22 @@ share-my-repo . --include "*.py,*.js"
 ```bash
 share-my-repo . --format json --output repo.json
 ```
+
+### Show only recently modified files (last 7 days):
+```bash
+share-my-repo . --recent
+```
+
+### Show recent changes and save to file:
+```bash
+share-my-repo . --recent --output recent_changes.md
+```
+
+### Combine recent filter with other options:
+```bash
+share-my-repo . --recent --include "*.py" --format json
+```
+
 ---
 
 
