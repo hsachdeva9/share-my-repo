@@ -80,8 +80,8 @@ def process_repositories(paths: List[str],
             # Handle large console output properly
             try:
                 # For very large output, write in chunks to avoid buffer issues
-                if len(final_output) > 50000:  # If output is larger than ~50KB
-                    chunk_size = 8192  # 8KB chunks
+                if len(final_output) > 50000: 
+                    chunk_size = 8192  
                     for i in range(0, len(final_output), chunk_size):
                         chunk = final_output[i:i + chunk_size]
                         sys.stdout.write(chunk)
@@ -97,7 +97,6 @@ def process_repositories(paths: List[str],
                     sys.stdout.flush()
                     
             except BrokenPipeError:
-                # Handle cases where output is piped and the pipe is closed
                 pass
             except Exception as e:
                 print(f"Error writing to console: {e}", file=sys.stderr)
