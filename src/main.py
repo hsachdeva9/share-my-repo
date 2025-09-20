@@ -13,7 +13,8 @@ def process_repositories(paths: List[str],
                         exclude: Optional[str] = None,
                         max_file_size: int = 16384,
                         output_format: str = 'markdown',
-                        show_tokens: bool = False):
+                        show_tokens: bool = False,
+                        recent: bool = False):
     """Main processing function with enhanced features."""
     
     VALID_FORMATS = ['markdown', 'json', 'yaml']
@@ -41,7 +42,7 @@ def process_repositories(paths: List[str],
                 repo_info = process_single_file(path, file_processor)
             elif path.is_dir():
                 repo_info = process_directory(path, file_processor, formatter, 
-                                            include_patterns, exclude_patterns)
+                                            include_patterns, exclude_patterns, recent)
             else:
                 print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
                 continue
@@ -61,10 +62,10 @@ def process_repositories(paths: List[str],
     # Handle output
     try:
         if len(all_results) == 1:
-            final_output = formatter.format_output(all_results[0], output_format, show_tokens)
+            final_output = formatter.format_output(all_results[0], output_format, show_tokens, recent)
         else:
             combined_info = combine_repositories(all_results)
-            final_output = formatter.format_output(combined_info, output_format, show_tokens)
+            final_output = formatter.format_output(combined_info, output_format, show_tokens, recent)
         
         # Output results
         if output_file:
@@ -113,7 +114,8 @@ def process_directory(path: Path,
                      file_processor: FileProcessor, 
                      formatter: OutputFormatter,
                      include_patterns: Optional[List[str]] = None,
-                     exclude_patterns: Optional[List[str]] = None) -> Dict[str, Any]:
+                     exclude_patterns: Optional[List[str]] = None,
+                     recent: bool = False) -> Dict[str, Any]:
     """Process a directory with enhanced filtering."""
     
     # Get git information
@@ -122,6 +124,11 @@ def process_directory(path: Path,
     # Discover files with enhanced filtering
     try:
         files = file_processor.discover_files(path, include_patterns, exclude_patterns)
+        
+        # Apply recent filtering if requested
+        if recent:
+            files = file_processor.filter_recent_files(files)
+            
     except Exception as e:
         print(f"Error discovering files: {e}", file=sys.stderr)
         files = []

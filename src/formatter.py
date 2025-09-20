@@ -1,5 +1,7 @@
 import json
 import yaml
+import os
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -57,14 +59,14 @@ class OutputFormatter:
         return "\n".join(result)
     
     def format_output(self, repo_info: Dict[str, Any], format_type: str = 'markdown', 
-                     show_tokens: bool = False) -> str:
+                     show_tokens: bool = False, recent: bool = False) -> str:
         """Format output in specified format."""
         if format_type == 'json':
             return self.format_json(repo_info, show_tokens)
         elif format_type == 'yaml':
             return self.format_yaml(repo_info, show_tokens)
         else:  # markdown
-            return self.format_markdown(repo_info, show_tokens)
+            return self.format_markdown(repo_info, show_tokens, recent)
     
     def format_json(self, repo_info: Dict[str, Any], show_tokens: bool = False) -> str:
         """Format as JSON."""
@@ -94,7 +96,7 @@ class OutputFormatter:
         
         return yaml.dump(output_data, default_flow_style=False, allow_unicode=True)
     
-    def format_markdown(self, repo_info: Dict[str, Any], show_tokens: bool = False) -> str:
+    def format_markdown(self, repo_info: Dict[str, Any], show_tokens: bool = False, recent: bool = False) -> str:
         """Format as Markdown."""
         output = []
         
@@ -129,12 +131,26 @@ class OutputFormatter:
         
         # File contents
         if repo_info.get('files'):
-            output.append("## File Contents")
+            if recent:
+                output.append("## Recent Changes (Last 7 Days)")
+            else:
+                output.append("## File Contents")
             output.append("")
             
             for file_info in repo_info['files']:
                 relative_path = file_info['relative_path']
-                output.append(f"### File: {relative_path}")
+                
+                # Add modification date for recent files
+                if recent:
+                    try:
+                        file_path = Path(file_info['absolute_path'])
+                        last_modified = file_path.stat().st_mtime
+                        days_ago = int((time.time() - last_modified) / 86400)
+                        output.append(f"### File: {relative_path} (modified {days_ago} days ago)")
+                    except (OSError, FileNotFoundError):
+                        output.append(f"### File: {relative_path}")
+                else:
+                    output.append(f"### File: {relative_path}")
                 
                 # Determine syntax highlighting language
                 file_ext = Path(relative_path).suffix.lower()
