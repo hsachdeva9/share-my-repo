@@ -19,8 +19,10 @@ from main import process_repositories
     is_flag=True,
     help="Include only files modified in the last 7 days"
 )
+@click.option('--line-numbers', '-l', is_flag=True, help='Show line numbers in file output')
 
-def main(paths, output, version, include, exclude, max_file_size, output_format, tokens, recent):
+
+def main(paths, output, version, include, exclude, max_file_size, output_format, tokens, recent, line_numbers):
     """Repository Context Packager - Convert repos to LLM-friendly format"""
 
     if version:
@@ -40,7 +42,8 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
             max_file_size=max_file_size,
             output_format=output_format,
             show_tokens=tokens,
-            recent=recent
+            recent=recent,
+            line_numbers=line_numbers
         )
     except Exception as e:
         click.echo(f"Error: {e}", err=True)

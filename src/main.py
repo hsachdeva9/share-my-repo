@@ -14,10 +14,10 @@ def process_repositories(paths: List[str],
                         max_file_size: int = 16384,
                         output_format: str = 'markdown',
                         show_tokens: bool = False,
-                        recent: bool = False):
+                        recent: bool = False,
+                        line_numbers: bool = False):  
     """Main processing function with enhanced features."""
     
-    VALID_FORMATS = ['markdown', 'json', 'yaml']
     if output_format not in VALID_FORMATS:
         raise ValueError(
             f"Invalid output format '{output_format}'. Must be one of: {', '.join(VALID_FORMATS)}"
@@ -39,10 +39,11 @@ def process_repositories(paths: List[str],
         
         try:
             if path.is_file():
-                repo_info = process_single_file(path, file_processor)
+                repo_info = process_single_file(path, file_processor, line_numbers=line_numbers) 
             elif path.is_dir():
                 repo_info = process_directory(path, file_processor, formatter, 
-                                            include_patterns, exclude_patterns, recent)
+                                            include_patterns, exclude_patterns, recent,
+                                            line_numbers=line_numbers)  
             else:
                 print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
                 continue
@@ -79,7 +80,6 @@ def process_repositories(paths: List[str],
         else:
             # Handle large console output properly
             try:
-                # For very large output, write in chunks to avoid buffer issues
                 if len(final_output) > 50000: 
                     chunk_size = 8192  
                     for i in range(0, len(final_output), chunk_size):
@@ -87,11 +87,9 @@ def process_repositories(paths: List[str],
                         sys.stdout.write(chunk)
                         sys.stdout.flush()
                 else:
-                    # For smaller output, use regular write
                     sys.stdout.write(final_output)
                     sys.stdout.flush()
                 
-                # Add a final newline if the output doesn't end with one
                 if not final_output.endswith('\n'):
                     sys.stdout.write('\n')
                     sys.stdout.flush()
@@ -100,7 +98,6 @@ def process_repositories(paths: List[str],
                 pass
             except Exception as e:
                 print(f"Error writing to console: {e}", file=sys.stderr)
-                # Fallback to regular print
                 print(final_output)
                 
     except Exception as e:
@@ -109,30 +106,26 @@ def process_repositories(paths: List[str],
         traceback.print_exc()
         sys.exit(1)
 
+# -------------------- UPDATED process_directory --------------------
 def process_directory(path: Path, 
                      file_processor: FileProcessor, 
                      formatter: OutputFormatter,
                      include_patterns: Optional[List[str]] = None,
                      exclude_patterns: Optional[List[str]] = None,
-                     recent: bool = False) -> Dict[str, Any]:
+                     recent: bool = False,
+                     line_numbers: bool = False):  # <-- added line_numbers parameter
     """Process a directory with enhanced filtering."""
     
-    # Get git information
     git_info = GitInfo(path)
     
-    # Discover files with enhanced filtering
     try:
         files = file_processor.discover_files(path, include_patterns, exclude_patterns)
-        
-        # Apply recent filtering if requested
         if recent:
             files = file_processor.filter_recent_files(files)
-            
     except Exception as e:
         print(f"Error discovering files: {e}", file=sys.stderr)
         files = []
     
-    # Process each file
     file_contents = []
     total_lines = 0
     
@@ -141,12 +134,16 @@ def process_directory(path: Path,
             content, truncated = file_processor.read_file_content(file_path)
             relative_path = file_path.relative_to(path)
             
+            # <-- add line numbers if requested
+            if line_numbers and content:
+                content = "\n".join(f"{idx+1}: {line}" for idx, line in enumerate(content.splitlines()))
+            
             line_count = len(content.split('\n')) if content else 0
             
             file_info = {
                 'relative_path': str(relative_path),
                 'absolute_path': str(file_path),
-                'content': content,
+                'content': content,  # <-- may include line numbers now
                 'truncated': truncated,
                 'lines': line_count
             }
@@ -157,14 +154,12 @@ def process_directory(path: Path,
         except Exception as e:
             print(f"Warning: Error processing {file_path}: {e}", file=sys.stderr)
     
-    # Generate tree structure
     try:
         tree_structure = formatter.generate_tree_structure(files, path)
     except Exception as e:
         print(f"Error generating tree structure: {e}", file=sys.stderr)
         tree_structure = "Error generating tree structure"
     
-    # Summary statistics
     summary = {
         'total_files': len(file_contents),
         'total_lines': total_lines
@@ -178,19 +173,24 @@ def process_directory(path: Path,
         'summary': summary
     }
 
-def process_single_file(file_path: Path, file_processor: FileProcessor) -> Dict[str, Any]:
+
+def process_single_file(file_path: Path, file_processor: FileProcessor, line_numbers: bool = False): 
     """Process a single file."""
     
     git_info = GitInfo(file_path.parent)
     
     try:
         content, truncated = file_processor.read_file_content(file_path)
+        
+        if line_numbers and content:
+            content = "\n".join(f"{idx+1}: {line}" for idx, line in enumerate(content.splitlines()))
+        
         line_count = len(content.split('\n')) if content else 0
         
         file_info = {
             'relative_path': file_path.name,
             'absolute_path': str(file_path),
-            'content': content,
+            'content': content, 
             'truncated': truncated,
             'lines': line_count
         }
