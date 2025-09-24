@@ -106,14 +106,14 @@ def process_repositories(paths: List[str],
         traceback.print_exc()
         sys.exit(1)
 
-# -------------------- UPDATED process_directory --------------------
+
 def process_directory(path: Path, 
                      file_processor: FileProcessor, 
                      formatter: OutputFormatter,
                      include_patterns: Optional[List[str]] = None,
                      exclude_patterns: Optional[List[str]] = None,
                      recent: bool = False,
-                     line_numbers: bool = False):  # <-- added line_numbers parameter
+                     line_numbers: bool = False):  
     """Process a directory with enhanced filtering."""
     
     git_info = GitInfo(path)
@@ -134,7 +134,7 @@ def process_directory(path: Path,
             content, truncated = file_processor.read_file_content(file_path)
             relative_path = file_path.relative_to(path)
             
-            # <-- add line numbers if requested
+            
             if line_numbers and content:
                 content = "\n".join(f"{idx+1}: {line}" for idx, line in enumerate(content.splitlines()))
             
@@ -143,7 +143,7 @@ def process_directory(path: Path,
             file_info = {
                 'relative_path': str(relative_path),
                 'absolute_path': str(file_path),
-                'content': content,  # <-- may include line numbers now
+                'content': content,  
                 'truncated': truncated,
                 'lines': line_count
             }
