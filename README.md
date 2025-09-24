@@ -14,6 +14,7 @@
 - **Recursive file discovery** - Automatically finds and processes all files in a repository
 - **Smart file filtering** - Skip binary files, large files, and unwanted directories
 - **Multiple repository support** - Handle single files or multiple repositories at once
+- **Line numbers in output** - Optionally include line numbers for all file contents
 
 ### **Directory Structure**
 - **Visual tree representation** - Generates clear, easy-to-read directory trees
@@ -93,6 +94,8 @@ share-my-repo [OPTIONS] [PATHS...]
 | `--format` | Output format: `markdown` (default), `json`, `yaml`. |
 | `--tokens` | Show estimated token count for LLM input. |
 | `-r, --recent` | Include only files modified in the last 7 days. Shows modification dates in output. |
+| `-l, --line-numbers` | Include line numbers for file content in output.. |
+
 
 ## Examples
 
@@ -133,7 +136,11 @@ share-my-repo . --recent --output recent_changes.md
 ```bash
 share-my-repo . --recent --include "*.py" --format json
 ```
-
+### Include line numbers in file contents:
+```bash
+share-my-repo . --line-numbers
+share-my-repo . -l
+```
 ---
 
 
