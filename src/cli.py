@@ -20,9 +20,9 @@ from main import process_repositories
     help="Include only files modified in the last 7 days"
 )
 @click.option('--line-numbers', '-l', is_flag=True, help='Show line numbers in file output')
+@click.option('--preview', type=int, default=None,help='Show only the first N lines of each file (preview mode)')
 
-
-def main(paths, output, version, include, exclude, max_file_size, output_format, tokens, recent, line_numbers):
+def main(paths, output, version, include, exclude, max_file_size, output_format, tokens, recent,line_numbers,preview):
     """Repository Context Packager - Convert repos to LLM-friendly format"""
 
     if version:
@@ -43,7 +43,8 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
             output_format=output_format,
             show_tokens=tokens,
             recent=recent,
-            line_numbers=line_numbers
+            line_numbers=line_numbers,
+            preview= preview,
         )
     except Exception as e:
         click.echo(f"Error: {e}", err=True)

@@ -24,6 +24,8 @@
 - **Pattern-based filtering** - Include/exclude files using glob patterns (`*.py`, `*.js`, etc.)
 - **Recent changes filter** - Show only files modified in the last 7 days with `--recent` flag
 - **File size limits** - Optional truncation of large files to avoid overwhelming output
+- **Preview feature** - Limit the number of lines shown per file with `--preview <N>`. Useful for quickly inspecting file content without printing full files.
+
 
 ### **Git Integration**
 - **Repository metadata** - Retrieve commit hash, branch, author, and date information
@@ -95,7 +97,7 @@ share-my-repo [OPTIONS] [PATHS...]
 | `--tokens` | Show estimated token count for LLM input. |
 | `-r, --recent` | Include only files modified in the last 7 days. Shows modification dates in output. |
 | `-l, --line-numbers` | Include line numbers for file content in output.. |
-
+| `--preview` | Limit the number of lines displayed per file. Useful to avoid printing full file content. |
 
 ## Examples
 
@@ -141,6 +143,16 @@ share-my-repo . --recent --include "*.py" --format json
 share-my-repo . --line-numbers
 share-my-repo . -l
 ```
+### Preview the first 5 lines of each file:
+```bash
+share-my-repo . --preview 5
+```
+### Preview the first 10 lines of a specific folder or file:
+```bash
+share-my-repo src --preview 10
+share-my-repo README.md --preview 10
+```
+
 ---
 
 

@@ -15,7 +15,8 @@ def process_repositories(paths: List[str],
                         output_format: str = 'markdown',
                         show_tokens: bool = False,
                         recent: bool = False,
-                        line_numbers: bool = False):  
+                        line_numbers: bool = False, 
+                        preview: Optional[int] = None):
     """Main processing function with enhanced features."""
     
     if output_format not in VALID_FORMATS:
@@ -39,10 +40,10 @@ def process_repositories(paths: List[str],
         
         try:
             if path.is_file():
-                repo_info = process_single_file(path, file_processor, line_numbers=line_numbers) 
+                repo_info = process_single_file(path, file_processor, preview, line_numbers=line_numbers) 
             elif path.is_dir():
                 repo_info = process_directory(path, file_processor, formatter, 
-                                            include_patterns, exclude_patterns, recent,
+                                            include_patterns, exclude_patterns, recent, preview,
                                             line_numbers=line_numbers)  
             else:
                 print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
@@ -113,7 +114,8 @@ def process_directory(path: Path,
                      include_patterns: Optional[List[str]] = None,
                      exclude_patterns: Optional[List[str]] = None,
                      recent: bool = False,
-                     line_numbers: bool = False):  
+                     line_numbers: bool = False,
+                     preview: Optional[int] = None) -> Dict[str, Any]:
     """Process a directory with enhanced filtering."""
     
     git_info = GitInfo(path)
@@ -129,7 +131,7 @@ def process_directory(path: Path,
     file_contents = []
     total_lines = 0
     
-    for i, file_path in enumerate(files, 1):
+    for file_path in files:
         try:
             content, truncated = file_processor.read_file_content(file_path)
             relative_path = file_path.relative_to(path)
@@ -140,11 +142,27 @@ def process_directory(path: Path,
             
             line_count = len(content.split('\n')) if content else 0
             
+            # Default truncated_type
+            truncated_type = None
+            
+            # Apply preview truncation
+            if preview:
+                lines = content.splitlines()
+                content = "\n".join(lines[:preview])
+                if len(lines) > preview:
+                    content += f"\n[... Preview truncated after {preview} lines ...]"
+                truncated_type = "preview"
+            # Apply size truncation
+            elif truncated:
+                truncated_type = "size"
+            
+            relative_path = file_path.relative_to(path)
+            
             file_info = {
                 'relative_path': str(relative_path),
                 'absolute_path': str(file_path),
-                'content': content,  
-                'truncated': truncated,
+                'content': content,
+                'truncated_type': truncated_type,
                 'lines': line_count
             }
             
@@ -173,11 +191,11 @@ def process_directory(path: Path,
         'summary': summary
     }
 
-
-def process_single_file(file_path: Path, file_processor: FileProcessor, line_numbers: bool = False): 
-    """Process a single file."""
     
+def process_single_file(file_path: Path, file_processor: FileProcessor,line_numbers: bool = False, preview: Optional[int] = None) -> Dict[str, Any]:
     git_info = GitInfo(file_path.parent)
+    
+    """Process a single file."""
     
     try:
         content, truncated = file_processor.read_file_content(file_path)
@@ -187,11 +205,23 @@ def process_single_file(file_path: Path, file_processor: FileProcessor, line_num
         
         line_count = len(content.split('\n')) if content else 0
         
+        # Default truncated_type
+        truncated_type = None
+        
+        if preview:
+            lines = content.splitlines()
+            content = "\n".join(lines[:preview])
+            if len(lines) > preview:
+                content += f"\n[... Preview truncated after {preview} lines ...]"
+            truncated_type = "preview"
+        elif truncated:
+            truncated_type = "size"
+        
         file_info = {
             'relative_path': file_path.name,
             'absolute_path': str(file_path),
-            'content': content, 
-            'truncated': truncated,
+            'content': content,
+            'truncated_type': truncated_type,
             'lines': line_count
         }
         
@@ -210,8 +240,6 @@ def process_single_file(file_path: Path, file_processor: FileProcessor, line_num
         
     except Exception as e:
         print(f"Error processing {file_path}: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
         return {
             'absolute_path': str(file_path.parent),
             'git_info': None,

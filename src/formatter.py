@@ -168,9 +168,12 @@ class OutputFormatter:
                 
                 output.append(f"```{lang}")
                 output.append(file_info['content'])
-                if file_info.get('truncated', False):
+
+                truncated_type = file_info.get('truncated_type')
+                if truncated_type == "size":
                     output.append("")
                     output.append("[... File truncated due to size limit ...]")
+                    
                 output.append("```")
                 output.append("")
         
