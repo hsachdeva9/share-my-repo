@@ -14,7 +14,8 @@ def process_repositories(paths: List[str],
                         max_file_size: int = 16384,
                         output_format: str = 'markdown',
                         show_tokens: bool = False,
-                        recent: bool = False):
+                        recent: bool = False,
+                        preview: Optional[int] = None):
     """Main processing function with enhanced features."""
     
     VALID_FORMATS = ['markdown', 'json', 'yaml']
@@ -39,10 +40,10 @@ def process_repositories(paths: List[str],
         
         try:
             if path.is_file():
-                repo_info = process_single_file(path, file_processor)
+                repo_info = process_single_file(path, file_processor, preview)
             elif path.is_dir():
                 repo_info = process_directory(path, file_processor, formatter, 
-                                            include_patterns, exclude_patterns, recent)
+                                            include_patterns, exclude_patterns, recent, preview)
             else:
                 print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
                 continue
@@ -114,40 +115,48 @@ def process_directory(path: Path,
                      formatter: OutputFormatter,
                      include_patterns: Optional[List[str]] = None,
                      exclude_patterns: Optional[List[str]] = None,
-                     recent: bool = False) -> Dict[str, Any]:
-    """Process a directory with enhanced filtering."""
+                     recent: bool = False,
+                     preview: Optional[int] = None) -> Dict[str, Any]:
     
-    # Get git information
     git_info = GitInfo(path)
     
-    # Discover files with enhanced filtering
     try:
         files = file_processor.discover_files(path, include_patterns, exclude_patterns)
-        
-        # Apply recent filtering if requested
         if recent:
             files = file_processor.filter_recent_files(files)
-            
     except Exception as e:
         print(f"Error discovering files: {e}", file=sys.stderr)
         files = []
     
-    # Process each file
     file_contents = []
     total_lines = 0
     
-    for i, file_path in enumerate(files, 1):
+    for file_path in files:
         try:
             content, truncated = file_processor.read_file_content(file_path)
-            relative_path = file_path.relative_to(path)
-            
             line_count = len(content.split('\n')) if content else 0
+            
+            # Default truncated_type
+            truncated_type = None
+            
+            # Apply preview truncation
+            if preview:
+                lines = content.splitlines()
+                content = "\n".join(lines[:preview])
+                if len(lines) > preview:
+                    content += f"\n[... Preview truncated after {preview} lines ...]"
+                truncated_type = "preview"
+            # Apply size truncation
+            elif truncated:
+                truncated_type = "size"
+            
+            relative_path = file_path.relative_to(path)
             
             file_info = {
                 'relative_path': str(relative_path),
                 'absolute_path': str(file_path),
                 'content': content,
-                'truncated': truncated,
+                'truncated_type': truncated_type,
                 'lines': line_count
             }
             
@@ -157,14 +166,12 @@ def process_directory(path: Path,
         except Exception as e:
             print(f"Warning: Error processing {file_path}: {e}", file=sys.stderr)
     
-    # Generate tree structure
     try:
         tree_structure = formatter.generate_tree_structure(files, path)
     except Exception as e:
         print(f"Error generating tree structure: {e}", file=sys.stderr)
         tree_structure = "Error generating tree structure"
     
-    # Summary statistics
     summary = {
         'total_files': len(file_contents),
         'total_lines': total_lines
@@ -178,20 +185,31 @@ def process_directory(path: Path,
         'summary': summary
     }
 
-def process_single_file(file_path: Path, file_processor: FileProcessor) -> Dict[str, Any]:
-    """Process a single file."""
-    
+
+def process_single_file(file_path: Path, file_processor: FileProcessor, preview: Optional[int] = None) -> Dict[str, Any]:
     git_info = GitInfo(file_path.parent)
     
     try:
         content, truncated = file_processor.read_file_content(file_path)
         line_count = len(content.split('\n')) if content else 0
         
+        # Default truncated_type
+        truncated_type = None
+        
+        if preview:
+            lines = content.splitlines()
+            content = "\n".join(lines[:preview])
+            if len(lines) > preview:
+                content += f"\n[... Preview truncated after {preview} lines ...]"
+            truncated_type = "preview"
+        elif truncated:
+            truncated_type = "size"
+        
         file_info = {
             'relative_path': file_path.name,
             'absolute_path': str(file_path),
             'content': content,
-            'truncated': truncated,
+            'truncated_type': truncated_type,
             'lines': line_count
         }
         
@@ -210,8 +228,6 @@ def process_single_file(file_path: Path, file_processor: FileProcessor) -> Dict[
         
     except Exception as e:
         print(f"Error processing {file_path}: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
         return {
             'absolute_path': str(file_path.parent),
             'git_info': None,
