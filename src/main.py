@@ -40,11 +40,11 @@ def process_repositories(paths: List[str],
         
         try:
             if path.is_file():
-                repo_info = process_single_file(path, file_processor, preview, line_numbers=line_numbers) 
+                repo_info = process_single_file(path, file_processor, line_numbers,preview)
             elif path.is_dir():
                 repo_info = process_directory(path, file_processor, formatter, 
-                                            include_patterns, exclude_patterns, recent, preview,
-                                            line_numbers=line_numbers)  
+                                            include_patterns, exclude_patterns, recent, line_numbers, preview
+                                            )  
             else:
                 print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
                 continue
