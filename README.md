@@ -173,10 +173,14 @@ You can store commonly used options in a project-level TOML configuration file s
 **Supported options in TOML (examples):**
 - output (string) — path to write output
 - format (string) — markdown, json, or yaml
-- include / exclude — either a single CSV string (e.g., "*.py,*.js") or an array of strings (e.g., ["*.py","*.md"])
+- include / exclude — either a single CSV string (e.g., "\*.py,\*.js") or an array of strings (e.g., ["*.py","*.md"])
 - max_file_size (integer) — bytes before truncation
 - tokens, recent, line_numbers (boolean)
 - preview (integer) — number of lines to show per file
+
+**Configuration with TOML**
+You can also create a `.share-my-repo-config.toml` file in the root of your repository to avoid typing the same flags every time.  
+By default, this file is optional and empty, but you can uncomment and edit the keys to customize the behavior.  
 
 **Example** `.share-my-repo-config.toml:`
 ```bash
@@ -187,9 +191,26 @@ max_file_size = 1024
 format = "json"
 # etc...
 ```
+
 **Parser note:** the tool tries to use Python 3.11's built-in tomllib first; when running under older Python versions it falls back to the tomli package. If you are using Python < 3.11, install the fallback with:
 ```bash
 pip install tomli
+```
+
+**Running:**
+```bash
+# Process the current directory 
+share-my-repo .
+
+# Save output to a file
+share-my-repo . --output repo_context.md
+
+# Change output format 
+share-my-repo . --format json --output repo.json
+share-my-repo . --format yaml --output repo.yaml
+
+# Include only certain files
+share-my-repo . --include "*.py,*.js"
 ```
 
 ---

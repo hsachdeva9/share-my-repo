@@ -1,10 +1,12 @@
-# .share-my-repo-config.toml
-output = "output.txt"
-include = ["*.py", "*.js"]
-exclude = "*test*"
-max_file_size = 1024
-format = "json"
-tokens = true
-recent = false
-line_numbers = true
-preview = 30
+# Example configuration for share-my-repo
+# Uncomment and set values as needed
+
+# output = "output.txt"
+# include = ["*.py", "*.js"]
+# exclude = "*test*"
+# max_file_size = 1024
+# format = "json"
+# tokens = true
+# recent = false
+# line_numbers = true
+# preview = 30
