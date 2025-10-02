@@ -1,0 +1,10 @@
+# .share-my-repo-config.toml
+output = "output.txt"
+include = ["*.py", "*.js"]
+exclude = "*test*"
+max_file_size = 1024
+format = "json"
+tokens = true
+recent = false
+line_numbers = true
+preview = 30

@@ -35,6 +35,7 @@
 - **Multiple output formats** - Generate Markdown, JSON, or YAML output
 - **Token estimation** - Estimate token count for LLM input optimization
 - **Summary statistics** - File counts, line counts, and other useful metrics
+- **TOML configuration file support** - Store commonly used options in a project-level config file
 
 ---
 
@@ -155,6 +156,43 @@ share-my-repo README.md --preview 10
 
 ---
 
+## Configuration via TOML
+
+You can store commonly used options in a project-level TOML configuration file so you don't have to pass the same flags every time.
+
+**Supported filenames (place in the repository root):**
+- .share-my-repo-config.toml
+- .share-my-repo.toml
+
+**Behavior:**
+- If a supported TOML config file exists in the current working directory, share-my-repo will load the file and use the values as defaults.
+- CLI arguments always take precedence — any option you pass on the command line overrides the value from the TOML file.
+- Unknown keys in the TOML file are ignored (this makes it safe to add future options).
+- If the TOML file exists but cannot be parsed, the program will exit with an error message.
+
+**Supported options in TOML (examples):**
+- output (string) — path to write output
+- format (string) — markdown, json, or yaml
+- include / exclude — either a single CSV string (e.g., "*.py,*.js") or an array of strings (e.g., ["*.py","*.md"])
+- max_file_size (integer) — bytes before truncation
+- tokens, recent, line_numbers (boolean)
+- preview (integer) — number of lines to show per file
+
+**Example** `.share-my-repo-config.toml:`
+```bash
+output = "output.txt"
+include = "*.js"
+exclude = "*test*"
+max_file_size = 1024
+format = "json"
+# etc...
+```
+**Parser note:** the tool tries to use Python 3.11's built-in tomllib first; when running under older Python versions it falls back to the tomli package. If you are using Python < 3.11, install the fallback with:
+```bash
+pip install tomli
+```
+
+---
 
 ## Structure
 
