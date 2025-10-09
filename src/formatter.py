@@ -10,12 +10,16 @@ class OutputFormatter:
         # Approximate token estimation: ~4 characters per token
         self.chars_per_token = 4
     
-    def estimate_tokens(self, text: str) -> int:
+    def _estimate_tokens(self, text: str) -> int:
         """Estimate token count for given text."""
         return len(text) // self.chars_per_token
+
+    def estimate_tokens(self, text: str) -> int:
+        """Keep old API but delegate to _estimate_tokens."""
+        return self._estimate_tokens(text)
     
     def generate_tree_structure(self, files: List[Path], root_path: Path) -> str:
-        """Generate a tree structure representation of the files."""
+        """Generate a deterministic tree structure representation of the files."""
         tree_dict = {}
         
         for file_path in files:
@@ -25,9 +29,7 @@ class OutputFormatter:
                 
                 current_dict = tree_dict
                 for part in parts[:-1]:  # directories
-                    if part not in current_dict:
-                        current_dict[part] = {}
-                    current_dict = current_dict[part]
+                    current_dict = current_dict.setdefault(part, {})
                 
                 current_dict[parts[-1]] = None
                 
@@ -37,12 +39,12 @@ class OutputFormatter:
         return self._dict_to_tree_string(tree_dict)
     
     def _dict_to_tree_string(self, tree_dict: Dict[str, Any], prefix: str = "") -> str:
-        """Convert nested dictionary to tree string."""
+        """Convert nested dictionary to a stable tree string (sorted for deterministic order)."""
         if not tree_dict:
             return ""
         
         result = []
-        items = list(tree_dict.items())
+        items = sorted(tree_dict.items(), key=lambda x: x[0].lower())  # <-- deterministic ordering
         
         for i, (name, subtree) in enumerate(items):
             is_last_item = i == len(items) - 1
@@ -73,12 +75,9 @@ class OutputFormatter:
         output_data = repo_info.copy()
         
         if show_tokens:
-            # Calculate token estimates
-            total_content = ""
-            for file_info in repo_info.get('files', []):
-                total_content += file_info.get('content', '')
-            
-            output_data['token_estimate'] = self.estimate_tokens(total_content)
+            # DRY token calculation
+            total_content = "".join(f.get('content', '') for f in repo_info.get('files', []))
+            output_data['token_estimate'] = self._estimate_tokens(total_content)
         
         return json.dumps(output_data, indent=2)
     
@@ -87,12 +86,9 @@ class OutputFormatter:
         output_data = repo_info.copy()
         
         if show_tokens:
-            # Calculate token estimates
-            total_content = ""
-            for file_info in repo_info.get('files', []):
-                total_content += file_info.get('content', '')
-            
-            output_data['token_estimate'] = self.estimate_tokens(total_content)
+            # DRY token calculation
+            total_content = "".join(f.get('content', '') for f in repo_info.get('files', []))
+            output_data['token_estimate'] = self._estimate_tokens(total_content)
         
         return yaml.dump(output_data, default_flow_style=False, allow_unicode=True)
     
@@ -100,42 +96,34 @@ class OutputFormatter:
         """Format as Markdown."""
         output = []
         
-        output.append("# Repository Context")
-        output.append("")
+        output.append("# Repository Context\n")
         
         # File system location
-        output.append("## File System Location")
-        output.append("")
-        output.append(str(repo_info['absolute_path']))
-        output.append("")
+        output.append("## File System Location\n")
+        output.append(str(repo_info['absolute_path']) + "\n")
         
         # Git information
-        output.append("## Git Info")
-        output.append("")
+        output.append("## Git Info\n")
         if repo_info.get('git_info') and 'error' not in repo_info['git_info']:
             git_info = repo_info['git_info']
             output.append(f"- Commit: {git_info.get('commit', 'N/A')}")
             output.append(f"- Branch: {git_info.get('branch', 'N/A')}")
             output.append(f"- Author: {git_info.get('author', 'N/A')}")
-            output.append(f"- Date: {git_info.get('date', 'N/A')}")
+            output.append(f"- Date: {git_info.get('date', 'N/A')}\n")
         else:
-            output.append("- Not a git repository")
-        output.append("")
+            output.append("- Not a git repository\n")
         
         # Directory structure
-        output.append("## Structure")
-        output.append("```")
+        output.append("## Structure\n```")
         output.append(repo_info.get('structure', 'No files found'))
-        output.append("```")
-        output.append("")
+        output.append("```\n")
         
         # File contents
         if repo_info.get('files'):
             if recent:
-                output.append("## Recent Changes (Last 7 Days)")
+                output.append("## Recent Changes (Last 7 Days)\n")
             else:
-                output.append("## File Contents")
-            output.append("")
+                output.append("## File Contents\n")
             
             for file_info in repo_info['files']:
                 relative_path = file_info['relative_path']
@@ -144,8 +132,7 @@ class OutputFormatter:
                 if recent:
                     try:
                         file_path = Path(file_info['absolute_path'])
-                        last_modified = file_path.stat().st_mtime
-                        days_ago = int((time.time() - last_modified) / 86400)
+                        days_ago = int((time.time() - file_path.stat().st_mtime) / 86400)
                         output.append(f"### File: {relative_path} (modified {days_ago} days ago)")
                     except (OSError, FileNotFoundError):
                         output.append(f"### File: {relative_path}")
@@ -155,27 +142,19 @@ class OutputFormatter:
                 # Determine syntax highlighting language
                 file_ext = Path(relative_path).suffix.lower()
                 lang_map = {
-                    '.py': 'python',
-                    '.js': 'javascript', '.jsx': 'jsx',
-                    '.ts': 'typescript', '.tsx': 'tsx',
-                    '.java': 'java',
-                    '.cpp': 'cpp', '.c': 'c', '.h': 'c',
-                    '.css': 'css', '.html': 'html',
-                    '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml',
-                    '.md': 'markdown', '.sh': 'bash', '.sql': 'sql',
+                    '.py': 'python', '.js': 'javascript', '.jsx': 'jsx', '.ts': 'typescript', '.tsx': 'tsx',
+                    '.java': 'java', '.cpp': 'cpp', '.c': 'c', '.h': 'c', '.css': 'css', '.html': 'html',
+                    '.json': 'json', '.yaml': 'yaml', '.yml': 'yaml', '.md': 'markdown', '.sh': 'bash', '.sql': 'sql'
                 }
                 lang = lang_map.get(file_ext, '')
                 
                 output.append(f"```{lang}")
                 output.append(file_info['content'])
-
-                truncated_type = file_info.get('truncated_type')
-                if truncated_type == "size":
-                    output.append("")
-                    output.append("[... File truncated due to size limit ...]")
+                
+                if file_info.get('truncated_type') == "size":
+                    output.append("\n[... File truncated due to size limit ...]")
                     
-                output.append("```")
-                output.append("")
+                output.append("```\n")
         
         # Summary statistics
         output.append("## Summary")
@@ -186,7 +165,7 @@ class OutputFormatter:
         # Token estimation if requested
         if show_tokens:
             total_content = "\n".join(output)
-            estimated_tokens = self.estimate_tokens(total_content)
+            estimated_tokens = self._estimate_tokens(total_content)
             output.append(f"- Estimated tokens: {estimated_tokens}")
         
         return "\n".join(output)
