@@ -30,20 +30,48 @@ class FileProcessor:
         """Return consistent lowercase forward-slash string for a path."""
         return path.as_posix().lower()
 
-    def load_gitignore_patterns(self, root_path: Path) -> Set[str]:
-        """Load patterns from .gitignore file if it exists."""
-        gitignore_path = root_path / '.gitignore'
-        patterns = set()
-        if gitignore_path.exists():
+    def load_gitignore_patterns(self, root_path: Path) -> dict:
+        """
+        Load all .gitignore files recursively from root.
+        Returns a dict: {Path to .gitignore folder: set(patterns)}
+        """
+        gitignore_dict = {}
+        for gitignore_file in root_path.rglob(".gitignore"):
+            patterns = set()
             try:
-                with open(gitignore_path, 'r', encoding='utf-8') as f:
+                with open(gitignore_file, 'r', encoding='utf-8') as f:
                     for line in f:
                         line = line.strip()
                         if line and not line.startswith('#'):
                             patterns.add(line)
             except Exception as e:
-                print(f"Warning: Could not read .gitignore: {e}", file=sys.stderr)
-        return patterns
+                print(f"Warning: Could not read {gitignore_file}: {e}", file=sys.stderr)
+            gitignore_dict[gitignore_file.parent] = patterns
+        return gitignore_dict
+
+    
+    def matches_gitignore(self, file_path: Path, gitignore_dict: dict, root_path: Path) -> bool:
+        """
+        Check if file matches any gitignore pattern in its directory hierarchy.
+        """
+        relative_path = file_path.relative_to(root_path)
+        for parent, patterns in gitignore_dict.items():
+            try:
+                rel_to_gitignore = file_path.relative_to(parent)
+            except ValueError:
+                continue
+            filename = file_path.name.lower()
+            norm_path = self._normalize_path(rel_to_gitignore)
+            for pattern in patterns:
+                pattern = pattern.lower()
+                if fnmatch.fnmatch(filename, pattern) or fnmatch.fnmatch(norm_path, pattern):
+                    return True
+                try:
+                    if rel_to_gitignore.match(pattern):
+                        return True
+                except ValueError:
+                    continue
+        return False
 
     def matches_pattern(self, path: Path, patterns: List[str], root_path: Path) -> bool:
         """Check if a path matches any of the given patterns."""
@@ -112,7 +140,7 @@ class FileProcessor:
                             exclude_patterns: Optional[List[str]] = None,
                             gitignore_patterns: Optional[Set[str]] = None) -> bool:
         """Determine if file should be included based on patterns."""
-        if gitignore_patterns and self.matches_pattern(file_path, list(gitignore_patterns), root_path):
+        if gitignore_patterns and self.matches_gitignore(file_path, gitignore_patterns, root_path):
             return False
         if exclude_patterns and self.matches_pattern(file_path, exclude_patterns, root_path):
             return False
@@ -147,6 +175,7 @@ class FileProcessor:
         """Find all files in directory tree that match our criteria."""
         files = []
         gitignore_patterns = self.load_gitignore_patterns(root_path) if use_gitignore else None
+
 
         try:
             for root, dirs, filenames in os.walk(root_path):

@@ -6,42 +6,30 @@ from file_processor import FileProcessor
 from git_info import GitInfo
 from formatter import OutputFormatter
 
-# Try to provide a unified toml loader: tomllib (py3.11+) or tomli fallback
+# TOML loader: tomllib (Python 3.11+) or tomli fallback
 try:
-    import tomllib as _toml_lib  # Python 3.11+
+    import tomllib as _toml_lib
 except Exception:
     try:
-        import tomli as _toml_lib  # pip install tomli
+        import tomli as _toml_lib
     except Exception:
         _toml_lib = None
 
 VALID_FORMATS = ['markdown', 'json', 'yaml']
 
-
 def _load_toml_config_from_cwd() -> Dict[str, Any]:
-    """
-    Search the current working directory for a TOML dotfile config.
-    Candidates:
-      - .share-my-repo*.toml
-      - any file matching .*config.toml
-    Returns a dict (possibly empty) or raises SystemExit on parse error / missing parser.
-    """
+    """Search the current working directory for a TOML dotfile config."""
     cwd = Path.cwd()
     candidates = list(cwd.glob('.share-my-repo*.toml')) + list(cwd.glob('.*config.toml'))
     if not candidates:
         return {}
-
     config_path = candidates[0]
 
     if _toml_lib is None:
-        print(
-            "TOML parser not available: please run 'pip install tomli' or use Python 3.11+.",
-            file=sys.stderr,
-        )
+        print("TOML parser not available: please install tomli or use Python 3.11+.", file=sys.stderr)
         sys.exit(1)
 
     try:
-        # tomllib/tomli expect binary mode
         with open(config_path, 'rb') as f:
             config = _toml_lib.load(f)
     except Exception as e:
@@ -51,12 +39,8 @@ def _load_toml_config_from_cwd() -> Dict[str, Any]:
     print(f"Loaded config from {config_path}", file=sys.stderr)
     return config or {}
 
-
 def _coerce_list_or_string_to_csv(val) -> Optional[str]:
-    """
-    Accept either a string (e.g. "*.py,*.js") or a list of strings ["*.py","*.js"].
-    Return a CSV string or None.
-    """
+    """Accept either a string or a list of strings, return a CSV string or None."""
     if val is None:
         return None
     if isinstance(val, str):
@@ -64,7 +48,6 @@ def _coerce_list_or_string_to_csv(val) -> Optional[str]:
     if isinstance(val, (list, tuple)):
         return ",".join(str(x) for x in val if x is not None)
     return str(val)
-
 
 def process_repositories(paths: List[str],
                         output_file: Optional[str] = None,
@@ -76,33 +59,33 @@ def process_repositories(paths: List[str],
                         recent: bool = False,
                         line_numbers: bool = False,
                         preview: Optional[int] = None):
-    """Main processing function with enhanced features and TOML dotfile support."""
+    """Main processing function with TOML and .gitignore support."""
 
-    # LOAD TOML CONFIG (if present) from cwd
+    # Default use_gitignore
+    use_gitignore = False
+
+    # Load config from TOML
     config = _load_toml_config_from_cwd()
 
-    # Only apply config values when the corresponding argument still equals the default.
-    # This allows CLI arguments to override config values.
     if config:
-        # output / output_file
         if output_file is None and 'output' in config:
             output_file = config.get('output')
 
-        # include / exclude (support string or array)
         if include is None and 'include' in config:
             include = _coerce_list_or_string_to_csv(config.get('include'))
 
         if exclude is None and 'exclude' in config:
             exclude = _coerce_list_or_string_to_csv(config.get('exclude'))
 
-        # numeric max_file_size
+        if 'use_gitignore' in config:
+            use_gitignore = bool(config.get('use_gitignore'))
+
         if max_file_size == 16384 and 'max_file_size' in config:
             try:
                 max_file_size = int(config.get('max_file_size'))
             except Exception:
                 print("Warning: 'max_file_size' in TOML config is not an integer; ignoring.", file=sys.stderr)
 
-        # output format (allow key 'format' or 'output_format')
         if output_format == 'markdown':
             fmt_val = config.get('format', config.get('output_format'))
             if fmt_val:
@@ -112,7 +95,6 @@ def process_repositories(paths: List[str],
                 else:
                     output_format = fmt_val
 
-        # booleans: show_tokens, recent, line_numbers
         if not show_tokens and 'tokens' in config:
             show_tokens = bool(config.get('tokens'))
 
@@ -122,40 +104,35 @@ def process_repositories(paths: List[str],
         if not line_numbers and 'line_numbers' in config:
             line_numbers = bool(config.get('line_numbers'))
 
-        # preview (number)
         if preview is None and 'preview' in config:
             try:
                 preview = int(config.get('preview'))
             except Exception:
                 print("Warning: 'preview' in TOML config is not an integer; ignoring.", file=sys.stderr)
 
-    # Validate format
     if output_format not in VALID_FORMATS:
-        raise ValueError(
-            f"Invalid output format '{output_format}'. Must be one of: {', '.join(VALID_FORMATS)}"
-        )
+        raise ValueError(f"Invalid output format '{output_format}'. Must be one of: {', '.join(VALID_FORMATS)}")
 
-    # Parse include/exclude patterns from comma-separated strings
     include_patterns = [p.strip() for p in include.split(',')] if include else None
     exclude_patterns = [p.strip() for p in exclude.split(',')] if exclude else None
 
-    # Initialize processors
     file_processor = FileProcessor(max_file_size)
     formatter = OutputFormatter()
 
-    # Process each path
     all_results = []
 
     for path_str in paths:
         path = Path(path_str).resolve()
-
         try:
             if path.is_file():
                 repo_info = process_single_file(path, file_processor, line_numbers, preview)
             elif path.is_dir():
-                repo_info = process_directory(path, file_processor, formatter,
-                                              include_patterns, exclude_patterns, recent, line_numbers, preview
-                                              )
+                repo_info = process_directory(
+                    path, file_processor, formatter,
+                    include_patterns, exclude_patterns,
+                    recent, line_numbers, preview,
+                    use_gitignore=use_gitignore
+                )
             else:
                 print(f"Error: {path} is neither a file nor a directory", file=sys.stderr)
                 continue
@@ -172,7 +149,6 @@ def process_repositories(paths: List[str],
         print("No results to output", file=sys.stderr)
         return
 
-    # Handle output
     try:
         if len(all_results) == 1:
             final_output = formatter.format_output(all_results[0], output_format, show_tokens, recent)
@@ -180,37 +156,15 @@ def process_repositories(paths: List[str],
             combined_info = combine_repositories(all_results)
             final_output = formatter.format_output(combined_info, output_format, show_tokens, recent)
 
-        # Output results
         if output_file:
-            try:
-                with open(output_file, 'w', encoding='utf-8') as f:
-                    f.write(final_output)
-                print(f"Output written to {output_file}", file=sys.stderr)
-            except Exception as e:
-                print(f"Error writing to {output_file}: {e}", file=sys.stderr)
-                sys.exit(1)
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(final_output)
+            print(f"Output written to {output_file}", file=sys.stderr)
         else:
-            # Handle large console output properly
-            try:
-                if len(final_output) > 50000:
-                    chunk_size = 8192
-                    for i in range(0, len(final_output), chunk_size):
-                        chunk = final_output[i:i + chunk_size]
-                        sys.stdout.write(chunk)
-                        sys.stdout.flush()
-                else:
-                    sys.stdout.write(final_output)
-                    sys.stdout.flush()
-
-                if not final_output.endswith('\n'):
-                    sys.stdout.write('\n')
-                    sys.stdout.flush()
-
-            except BrokenPipeError:
-                pass
-            except Exception as e:
-                print(f"Error writing to console: {e}", file=sys.stderr)
-                print(final_output)
+            sys.stdout.write(final_output)
+            if not final_output.endswith('\n'):
+                sys.stdout.write('\n')
+            sys.stdout.flush()
 
     except Exception as e:
         print(f"Error formatting output: {e}", file=sys.stderr)
@@ -226,13 +180,14 @@ def process_directory(path: Path,
                       exclude_patterns: Optional[List[str]] = None,
                       recent: bool = False,
                       line_numbers: bool = False,
-                      preview: Optional[int] = None) -> Dict[str, Any]:
-    """Process a directory with enhanced filtering."""
+                      preview: Optional[int] = None,
+                      use_gitignore: bool = False) -> Dict[str, Any]:
+    """Process a directory respecting .gitignore."""
 
     git_info = GitInfo(path)
 
     try:
-        files = file_processor.discover_files(path, include_patterns, exclude_patterns)
+        files = file_processor.discover_files(path, include_patterns, exclude_patterns, use_gitignore=use_gitignore)
         if recent:
             files = file_processor.filter_recent_files(files)
     except Exception as e:
@@ -251,22 +206,16 @@ def process_directory(path: Path,
                 content = "\n".join(f"{idx+1}: {line}" for idx, line in enumerate(content.splitlines()))
 
             line_count = len(content.split('\n')) if content else 0
-
-            # Default truncated_type
             truncated_type = None
 
-            # Apply preview truncation
             if preview:
                 lines = content.splitlines()
                 content = "\n".join(lines[:preview])
                 if len(lines) > preview:
                     content += f"\n[... Preview truncated after {preview} lines ...]"
                 truncated_type = "preview"
-            # Apply size truncation
             elif truncated:
                 truncated_type = "size"
-
-            relative_path = file_path.relative_to(path)
 
             file_info = {
                 'relative_path': str(relative_path),
@@ -288,10 +237,7 @@ def process_directory(path: Path,
         print(f"Error generating tree structure: {e}", file=sys.stderr)
         tree_structure = "Error generating tree structure"
 
-    summary = {
-        'total_files': len(file_contents),
-        'total_lines': total_lines
-    }
+    summary = {'total_files': len(file_contents), 'total_lines': total_lines}
 
     return {
         'absolute_path': str(path),
@@ -304,9 +250,6 @@ def process_directory(path: Path,
 
 def process_single_file(file_path: Path, file_processor: FileProcessor, line_numbers: bool = False, preview: Optional[int] = None) -> Dict[str, Any]:
     git_info = GitInfo(file_path.parent)
-
-    """Process a single file."""
-
     try:
         content, truncated = file_processor.read_file_content(file_path)
 
@@ -314,8 +257,6 @@ def process_single_file(file_path: Path, file_processor: FileProcessor, line_num
             content = "\n".join(f"{idx+1}: {line}" for idx, line in enumerate(content.splitlines()))
 
         line_count = len(content.split('\n')) if content else 0
-
-        # Default truncated_type
         truncated_type = None
 
         if preview:
@@ -335,10 +276,7 @@ def process_single_file(file_path: Path, file_processor: FileProcessor, line_num
             'lines': line_count
         }
 
-        summary = {
-            'total_files': 1,
-            'total_lines': line_count
-        }
+        summary = {'total_files': 1, 'total_lines': line_count}
 
         return {
             'absolute_path': str(file_path.parent),
@@ -358,10 +296,8 @@ def process_single_file(file_path: Path, file_processor: FileProcessor, line_num
             'summary': {'total_files': 0, 'total_lines': 0}
         }
 
-
 def combine_repositories(repo_infos: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Combine multiple repository information dictionaries."""
-
     if len(repo_infos) == 1:
         return repo_infos[0]
 
@@ -380,7 +316,6 @@ def combine_repositories(repo_infos: List[Dict[str, Any]]) -> Dict[str, Any]:
         combined['summary']['total_lines'] += summary.get('total_lines', 0)
 
     return combined
-
 
 if __name__ == '__main__':
     process_repositories(['.'])

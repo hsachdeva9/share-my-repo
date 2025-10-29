@@ -15,6 +15,7 @@
 - **Smart file filtering** - Skip binary files, large files, and unwanted directories
 - **Multiple repository support** - Handle single files or multiple repositories at once
 - **Line numbers in output** - Optionally include line numbers for all file contents
+- **Respect `.gitignore`** - Automatically detect and respect `.gitignore` files, skipping any files that are ignored by Git in the repository. 
 
 ### **Directory Structure**
 - **Visual tree representation** - Generates clear, easy-to-read directory trees
@@ -99,6 +100,7 @@ share-my-repo [OPTIONS] [PATHS...]
 | `-r, --recent` | Include only files modified in the last 7 days. Shows modification dates in output. |
 | `-l, --line-numbers` | Include line numbers for file content in output.. |
 | `--preview` | Limit the number of lines displayed per file. Useful to avoid printing full file content. |
+| `--use-gitignore` | Respect .gitignore file patterns and exclude ignored files from processing. |
 
 ## Examples
 
@@ -153,6 +155,12 @@ share-my-repo . --preview 5
 share-my-repo src --preview 10
 share-my-repo README.md --preview 10
 ```
+### Respect `.gitignore` and process files accordingly:
+```bash
+share-my-repo . --use-gitignore
+share-my-repo src --use-gitignore
+share-my-repo README.md --use-gitignore
+```
 
 ---
 
@@ -177,6 +185,7 @@ You can store commonly used options in a project-level TOML configuration file s
 - max_file_size (integer) — bytes before truncation
 - tokens, recent, line_numbers (boolean)
 - preview (integer) — number of lines to show per file
+- use_gitignore (boolean) — whether to respect `.gitignore` files. Default is `false`.
 
 **Configuration with TOML**
 You can also create a `.share-my-repo-config.toml` file in the root of your repository to avoid typing the same flags every time.  
@@ -189,6 +198,7 @@ include = "*.js"
 exclude = "*test*"
 max_file_size = 1024
 format = "json"
+use_gitignore = true
 # etc...
 ```
 
