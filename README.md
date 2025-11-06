@@ -241,6 +241,55 @@ share-my-repo/
     ├── main.py
     └── __init__.py
 ```
+---
+
+## Running Tests
+
+1. **Install development dependencies**
+
+```bash
+pip install -e .[dev]
+```
+2. **Run all tests**
+
+```bash
+pytest -v
+```
+
+3. **Run a single test file**
+
+```bash
+pytest -v tests/test_main.py
+```
+
+4. **Run a single test function**
+
+```bash
+pytest -v tests/test_main.py::TestMain::test_example
+```
+
+5. **Watch for changes and run tests automatically**
+
+```bash
+ptw
+```
+
+We provide scripts to run tests with coverage on both Windows and Mac/Linux.
+
+### Windows
+
+Run all tests with coverage:
+
+```powershell
+scripts\test.bat
+```
+
+### Lunix
+
+```bash
+ ./scripts/test.sh
+```
+---
 
 ## Contributing
 
