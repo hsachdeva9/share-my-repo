@@ -18,9 +18,10 @@ setup(
     install_requires=[
         "gitpython>=3.1.0",
         "click>=8.0.0",
+        "PyYAML>=6.0"
     ],
     extras_require={
-        "dev": ["pytest>=7.0.0", "pytest-watch>=4.2.0", "pytest-cov>=4.0.0"],
+        "dev": ["pytest>=7.0.0", "pytest-watch>=4.2.0", "pytest-cov>=4.0.0"", watchdog>=2.3.0"],
     },
     entry_points={
         "console_scripts": [
