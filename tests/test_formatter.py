@@ -37,7 +37,6 @@ class TestOutputFormatter:
         tree_str = formatter.generate_tree_structure([], tmp_path)
         assert tree_str == ""
 
-    # New test: multiple files in same directory
     def test_generate_tree_structure_multiple_files_same_dir(self, formatter, tmp_path):
         file1 = tmp_path / "file1.txt"
         file2 = tmp_path / "file2.txt"
@@ -47,7 +46,6 @@ class TestOutputFormatter:
         assert "file1.txt" in tree_str
         assert "file2.txt" in tree_str
 
-    # New test: file outside root path (should be skipped)
     def test_generate_tree_structure_file_outside_root(self, formatter, tmp_path):
         outside_file = Path("/tmp/outside.txt")
         outside_file.write_text("outside")
@@ -102,7 +100,6 @@ class TestOutputFormatter:
         md = formatter.format_markdown(repo_info)
         assert "[... File truncated due to size limit ...]" in md
 
-    # New test: no files in repo
     def test_format_markdown_no_files(self, formatter, tmp_path):
         repo_info = {
             "absolute_path": tmp_path,
@@ -112,9 +109,9 @@ class TestOutputFormatter:
         }
         md = formatter.format_markdown(repo_info)
         assert "## File Contents" not in md
-        assert "## Structure" in md
+        assert "##### Structure" in md
 
-    # New test: git info included
+    
     def test_format_markdown_with_git_info(self, formatter, tmp_path):
         file = tmp_path / "file.txt"
         file.write_text("content")
