@@ -109,7 +109,7 @@ class TestOutputFormatter:
         }
         md = formatter.format_markdown(repo_info)
         assert "## File Contents" not in md
-        assert "##### Structure" in md
+        assert "## Structure" in md
 
     
     def test_format_markdown_with_git_info(self, formatter, tmp_path):
