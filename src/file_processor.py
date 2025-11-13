@@ -28,7 +28,9 @@ class FileProcessor:
     # ---------------------------
     def _normalize_path(self, path: Path) -> str:
         """Return consistent lowercase forward-slash string for a path."""
-        return path.as_posix().lower()
+        if path is None:
+            raise AttributeError("path cannot be None")
+        return str(path).replace("\\", "/").lower()
 
     def load_gitignore_patterns(self, root_path: Path) -> dict:
         """
