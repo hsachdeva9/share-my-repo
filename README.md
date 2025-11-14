@@ -284,7 +284,7 @@ Run all tests with coverage:
 scripts\test.bat
 ```
 
-### Lunix
+### Linux
 
 ```bash
  ./scripts/test.sh
