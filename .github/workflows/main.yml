@@ -24,6 +24,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[dev]
 
+    - name: Run Flake8 linting (ignore line length)
+      run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+        flake8 src tests --ignore=E501
+
     - name: Run tests with coverage
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/src

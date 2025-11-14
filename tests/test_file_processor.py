@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 from src.file_processor import FileProcessor
 
+
 class TestNormalizePath:
 
     def setup_method(self):
@@ -11,7 +12,7 @@ class TestNormalizePath:
         path = Path("C:\\Users\\Example\\File.TXT")
         result = self.processor._normalize_path(path)
         assert result == "c:/users/example/file.txt"
-    
+
     def test_normalize_path_unix(self):
         path = Path("/home/user/File.txt")
         result = self.processor._normalize_path(path)
@@ -26,7 +27,7 @@ class TestNormalizePath:
         path = Path("/home/user/My Documents/File.txt")
         result = self.processor._normalize_path(path)
         assert result == "/home/user/my documents/file.txt"
-    
+
     def test_already_normalized_path(self):
         path = Path("c:/users/example/file.txt")
         result = self.processor._normalize_path(path)
@@ -50,6 +51,7 @@ class TestNormalizePath:
         path = Path("/home/user/folder/")
         result = self.processor._normalize_path(path)
         assert result == "/home/user/folder"
+
 
 class TestMatchesPattern:
     def setup_method(self):

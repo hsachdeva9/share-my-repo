@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from src.formatter import OutputFormatter
-import time
+
 
 class TestOutputFormatter:
     @pytest.fixture
@@ -61,10 +61,14 @@ class TestOutputFormatter:
         repo_info = {
             "absolute_path": tmp_path,
             "files": [
-                {"absolute_path": str(file), "relative_path": "file.txt", "content": "hello world"}
+                {
+                    "absolute_path": str(file),
+                    "relative_path": "file.txt",
+                    "content": "hello world",
+                }
             ],
             "structure": "├── file.txt",
-            "git_info": {}
+            "git_info": {},
         }
         md = formatter.format_markdown(repo_info)
         assert "## File Contents" in md
@@ -77,10 +81,14 @@ class TestOutputFormatter:
         repo_info = {
             "absolute_path": tmp_path,
             "files": [
-                {"absolute_path": str(file), "relative_path": "file.txt", "content": "recent content"}
+                {
+                    "absolute_path": str(file),
+                    "relative_path": "file.txt",
+                    "content": "recent content",
+                }
             ],
             "structure": "├── file.txt",
-            "git_info": {}
+            "git_info": {},
         }
         md = formatter.format_markdown(repo_info, recent=True)
         assert "## Recent Changes" in md
@@ -92,10 +100,15 @@ class TestOutputFormatter:
         repo_info = {
             "absolute_path": tmp_path,
             "files": [
-                {"absolute_path": str(file), "relative_path": "file.txt", "content": "x" * 500, "truncated_type": "size"}
+                {
+                    "absolute_path": str(file),
+                    "relative_path": "file.txt",
+                    "content": "x" * 500,
+                    "truncated_type": "size",
+                }
             ],
             "structure": "├── file.txt",
-            "git_info": {}
+            "git_info": {},
         }
         md = formatter.format_markdown(repo_info)
         assert "[... File truncated due to size limit ...]" in md
@@ -105,21 +118,31 @@ class TestOutputFormatter:
             "absolute_path": tmp_path,
             "files": [],
             "structure": "",
-            "git_info": {}
+            "git_info": {},
         }
         md = formatter.format_markdown(repo_info)
         assert "## File Contents" not in md
         assert "## Structure" in md
 
-    
     def test_format_markdown_with_git_info(self, formatter, tmp_path):
         file = tmp_path / "file.txt"
         file.write_text("content")
         repo_info = {
             "absolute_path": tmp_path,
-            "files": [{"absolute_path": str(file), "relative_path": "file.txt", "content": "content"}],
+            "files": [
+                {
+                    "absolute_path": str(file),
+                    "relative_path": "file.txt",
+                    "content": "content",
+                }
+            ],
             "structure": "├── file.txt",
-            "git_info": {"commit": "abc123", "branch": "main", "author": "Me", "date": "2025-11-13"}
+            "git_info": {
+                "commit": "abc123",
+                "branch": "main",
+                "author": "Me",
+                "date": "2025-11-13",
+            },
         }
         md = formatter.format_markdown(repo_info)
         assert "- Commit: abc123" in md

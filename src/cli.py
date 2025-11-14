@@ -1,28 +1,62 @@
 import click
 import sys
-from pathlib import Path
 from main import process_repositories
 
 
-@click.command(context_settings={'help_option_names': ['-h', '--help']})
-@click.argument('paths', nargs=-1, type=click.Path(exists=True))
-@click.option('-o', '--output', help='Output file path')
-@click.option('-v', '--version', is_flag=True, help='Show version')
-@click.option('--include', help='Include files matching pattern (e.g., "*.js,*.py")')
-@click.option('--exclude', help='Exclude files matching pattern (e.g., "*.log,node_modules")')
-@click.option('--max-file-size', type=int, default=16384, help='Maximum file size in bytes (default: 16384)')
-@click.option('--format', 'output_format', type=click.Choice(['markdown', 'json', 'yaml']),
-              default='markdown', help='Output format')
-@click.option('--tokens', is_flag=True, help='Show estimated token count')
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.argument("paths", nargs=-1, type=click.Path(exists=True))
+@click.option("-o", "--output", help="Output file path")
+@click.option("-v", "--version", is_flag=True, help="Show version")
+@click.option("--include", help='Include files matching pattern (e.g., "*.js,*.py")')
 @click.option(
-    "-r", "--recent",
-    is_flag=True,
-    help="Include only files modified in the last 7 days"
+    "--exclude",
+    help='Exclude files matching pattern (e.g., "*.log,node_modules")'
 )
-@click.option('--line-numbers', '-l', is_flag=True, help='Show line numbers in file output')
-@click.option('--preview', type=int, default=None,help='Show only the first N lines of each file (preview mode)')
-
-def main(paths, output, version, include, exclude, max_file_size, output_format, tokens, recent,line_numbers,preview):
+@click.option(
+    "--max-file-size",
+    type=int,
+    default=16384,
+    help="Maximum file size in bytes (default: 16384)",
+)
+@click.option(
+    "--format",
+    "output_format",
+    type=click.Choice(["markdown", "json", "yaml"]),
+    default="markdown",
+    help="Output format",
+)
+@click.option("--tokens", is_flag=True, help="Show estimated token count")
+@click.option(
+    "-r",
+    "--recent",
+    is_flag=True,
+    help="Include only files modified in the last 7 days",
+)
+@click.option(
+    "--line-numbers",
+    "-l",
+    is_flag=True,
+    help="Show line numbers in file output",
+)
+@click.option(
+    "--preview",
+    type=int,
+    default=None,
+    help="Show only the first N lines of each file (preview mode)",
+)
+def main(
+    paths,
+    output,
+    version,
+    include,
+    exclude,
+    max_file_size,
+    output_format,
+    tokens,
+    recent,
+    line_numbers,
+    preview,
+):
     """Repository Context Packager - Convert repos to LLM-friendly format"""
 
     if version:
@@ -31,7 +65,7 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
 
     # If no paths provided, use current directory
     if not paths:
-        paths = ['.']
+        paths = ["."]
 
     try:
         process_repositories(
@@ -44,12 +78,12 @@ def main(paths, output, version, include, exclude, max_file_size, output_format,
             show_tokens=tokens,
             recent=recent,
             line_numbers=line_numbers,
-            preview= preview,
+            preview=preview,
         )
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,5 +1,5 @@
-import pytest
 from src.main import _coerce_list_or_string_to_csv
+
 
 class TestCoerceListOrStringToCSV:
 
