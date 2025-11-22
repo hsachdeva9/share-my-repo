@@ -44,6 +44,14 @@
 
 Make sure you have **Python 3.7+** installed.
 
+## Install via PyPI
+Install the latest release of `share-my-repo` directly from PyPI:
+
+```bash
+pip install share-my-repo
+```
+## Install from Github
+If you want to install the package directly from GitHub:
 1. Clone the repository:
 
 ### For End Users
@@ -230,7 +238,7 @@ share-my-repo . --include "*.py,*.js"
 ```bash
 share-my-repo/
 ├── README.md
-├── setup.py
+├── pyproject.toml
 ├── LICENSE
 ├── .gitignore
 └── src/

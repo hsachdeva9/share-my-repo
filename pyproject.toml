@@ -4,11 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "share-my-repo"
-dynamic = ["version"]
+version = "1.1.0"
 description = "CLI tool to package git repositories for sharing with LLMs"
 readme = {content-type = "text/markdown", file = "README.md"}
 requires-python = ">=3.7"
-license = "MIT"
 authors = [
     {name = "Hitesh Sachdeva", email = "yhsachdeva9@myseneca.ca"}
 ]
