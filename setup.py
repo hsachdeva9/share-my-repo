@@ -4,7 +4,7 @@ setup(
     name="share-my-repo",
     version="0.1.0",
     author="Hitesh Sachdeva",
-    author_email="yhsachdeva9@myseneca.ca",
+    author_email="hsachdeva9@myseneca.ca",
     description="CLI tool to package git repositories for sharing with LLMs",
     package_dir={"": "src"},
     py_modules=[
