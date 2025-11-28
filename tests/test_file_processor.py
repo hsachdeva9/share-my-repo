@@ -1,4 +1,7 @@
 import pytest
+import tempfile
+import time
+import os
 from pathlib import Path
 from src.file_processor import FileProcessor
 
@@ -76,17 +79,20 @@ class TestMatchesPattern:
     def test_no_match(self):
         file_path = Path("/project/src/main.py")
         patterns = ["*.txt"]
-        assert not self.processor.matches_pattern(file_path, patterns, self.root)
+        assert not self.processor.matches_pattern(
+            file_path, patterns, self.root)
 
     def test_empty_patterns_list(self):
         file_path = Path("/project/src/main.py")
         patterns = []
-        assert not self.processor.matches_pattern(file_path, patterns, self.root)
+        assert not self.processor.matches_pattern(
+            file_path, patterns, self.root)
 
     def test_none_patterns(self):
         file_path = Path("/project/src/main.py")
         patterns = None
-        assert not self.processor.matches_pattern(file_path, patterns, self.root)
+        assert not self.processor.matches_pattern(
+            file_path, patterns, self.root)
 
     def test_pattern_with_spaces(self):
         file_path = Path("/project/src/my file.py")
@@ -106,3 +112,45 @@ class TestMatchesPattern:
     def test_none_file_path(self):
         with pytest.raises(AttributeError):
             self.processor.matches_pattern(None, ["*.py"], self.root)
+
+
+class TestIsRecentFile:
+    def setup_method(self):
+        self.processor = FileProcessor()
+
+    def test_recently_created_file(self):
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            temp_path = Path(f.name)
+
+        try:
+            assert self.processor.is_recent_file(temp_path, days=7)
+            assert self.processor.is_recent_file(temp_path)
+        finally:
+            temp_path.unlink()
+
+    def test_old_file_not_recent(self):
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            temp_path = Path(f.name)
+
+        try:
+            old_time = time.time() - (10 * 86400)
+            os.utime(temp_path, (old_time, old_time))
+            assert not self.processor.is_recent_file(temp_path, days=7)
+        finally:
+            temp_path.unlink()
+
+    def test_custom_day_threshold(self):
+        with tempfile.NamedTemporaryFile(delete=False) as f:
+            temp_path = Path(f.name)
+
+        try:
+            five_days_ago = time.time() - (5 * 86400)
+            os.utime(temp_path, (five_days_ago, five_days_ago))
+            assert self.processor.is_recent_file(temp_path, days=7)
+            assert not self.processor.is_recent_file(temp_path, days=3)
+        finally:
+            temp_path.unlink()
+
+    def test_nonexistent_file(self):
+        nonexistent_path = Path("/nonexistent/file.txt")
+        assert not self.processor.is_recent_file(nonexistent_path, days=7)
